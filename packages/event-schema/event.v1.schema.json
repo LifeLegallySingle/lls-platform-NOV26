@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legallysingle.com/schemas/lls-event.v1.json",
+  "title": "LLS platform event v1 (HUB ⇄ SLEE)",
+  "description": "Canonical event contract shared by LLS HUB (PHP), the SLEE Worker (TypeScript), and future Worker apps. SLEE also accepts HUB's native lls_hub_eme_emit() shape and normalizes it (case-insensitive keys, aliases).",
+  "type": "object",
+  "required": ["type", "email"],
+  "properties": {
+    "v": { "const": 1 },
+    "event_id": { "type": "string", "description": "Idempotency key (UUID). Re-sends with the same id are ignored." },
+    "type": {
+      "type": "string",
+      "description": "Dotted event name. Legacy aliases accepted: sah_quiz, glotype, power_move_optin, freedom_tax, datebase, lls_hub_optin, ailife_coach.",
+      "examples": ["sah_quiz.completed", "glotype.completed", "power_move.optin", "freedom_tax.calculated", "datebase.matched", "optin.subscribed", "ailife.subscribed", "identity.updated"]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "email": { "type": "string", "format": "email" },
+    "hub_id": { "type": "string", "description": "wp_lls_identities primary identifier" },
+    "attributes": {
+      "type": "object",
+      "description": "Normalized HUB attributes (case-insensitive). Merged additively — empty values never overwrite.",
+      "properties": {
+        "SAH_SCORE": { "type": ["integer", "string"] },
+        "SAH_STATUS": { "type": "string" },
+        "SAH_TOTAL": {}, "SAH_Q15": {},
+        "GLOTYPE_ELEMENT": { "type": "string" },
+        "GLOTYPE_SCORE": {},
+        "POWER_MOVE": { "enum": ["Mind", "Body", "Heart", "Glow", "Wallet"] },
+        "NEXT_POWER_MOVE": {}, "PM_SOURCE": {}, "PAGE_SOURCE": {},
+        "STR_FREEDOM_TAX": {}, "DATEBASE_CITY": {}, "FIRSTNAME": {}
+      },
+      "additionalProperties": true
+    },
+    "identify_qs": { "type": "string", "description": "Query string from lls_hub_generate_identify_url(); appended to every email CTA. Added automatically by the WP bridge." },
+    "source_system": { "type": "string", "examples": ["hub", "wp"] }
+  },
+  "x-feedback": {
+    "description": "SLEE → HUB (POST /wp-json/lls-slee/v1/feedback, same HMAC scheme)",
+    "types": ["email.clicked", "email.unsubscribed", "email.bounced", "email.complained", "email.sunset"],
+    "shape": { "v": 1, "type": "email.clicked", "email": "…", "hub_id": "…", "occurred_at": "…", "source": "slee", "data": { "url": "…", "sequence": "…", "template": "…", "cia_tier": "HOT" } }
+  },
+  "x-auth": "Headers X-LLS-Timestamp (unix seconds) + X-LLS-Signature: sha256=hex(HMAC_SHA256(secret, timestamp + '.' + rawBody)); 300s replay window."
+}

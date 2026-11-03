@@ -1,0 +1,43 @@
+# SLEE — Single Life Email Engine
+# Free-plan friendly: 1 Worker + 1 D1 database + 1 cron trigger. No Queues, no KV, no paid features.
+name = "slee"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Uncomment once DNS for legallysingle.com is on Cloudflare (it is) to send tracked links from your own domain:
+# routes = [{ pattern = "slee.legallysingle.com", custom_domain = true }]
+
+[observability]
+enabled = true
+
+# Scheduler: sends due sequence steps + flushes HUB feedback outbox.
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "slee"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"   # from: npx wrangler d1 create slee
+migrations_dir = "migrations"
+
+[vars]
+SITE_URL = "https://legallysingle.com"
+PUBLIC_BASE_URL = "https://slee.YOUR-SUBDOMAIN.workers.dev"          # change to https://slee.legallysingle.com after custom domain
+HUB_FEEDBACK_URL = "https://legallysingle.com/wp-json/lls-slee/v1/feedback"
+IDENTIFY_DOMAINS = "legallysingle.com,www.legallysingle.com"
+SENDER_EMAIL = "hello@legallysingle.com"
+SENDER_NAME = "Life Legally Single"
+REPLY_TO = "hello@legallysingle.com"
+MAIL_ADDRESS = "Life Legally Single · REPLACE WITH MAILING ADDRESS (CAN-SPAM)"
+DAILY_SEND_CAP = "250"      # keep under your Brevo plan's daily limit
+BATCH_SIZE = "6"            # sends per cron run (free plan: 50 D1 queries/invocation → max 8)
+MIN_HOURS_BETWEEN_EMAILS = "20"
+DRY_RUN = "true"            # "true" = render + log, no real sends. Flip to "false" to go live.
+
+# Secrets (set with `npx wrangler secret put NAME`, never commit):
+#   HUB_SHARED_SECRET   — HMAC secret shared with the WP bridge plugin (HUB <-> SLEE)
+#   LINK_SECRET         — signs click + unsubscribe links
+#   ADMIN_TOKEN         — bearer token for /v1/admin/*
+#   BREVO_API_KEY       — Brevo v3 API key
+#   BREVO_WEBHOOK_TOKEN — token appended to the Brevo webhook URL
