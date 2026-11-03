@@ -20,6 +20,10 @@ export const DELIVERABILITY = {
   softBounceWindowDays: 30,
   unreliableAt: 2,   // flag as "unreliable" (still mailed)
   suppressAt: 3,     // suppress (lifts automatically on click / quiz / opt-in)
+  /** Analytics events (sent/delivered/opens/clicks/deferred/errors) stop being stored past this per UTC day.
+   *  Bounces, complaints and unsubscribes are ALWAYS processed. Free D1 = 100k row-writes/day. */
+  maxAnalyticsEventsPerDay: 20000,
+  eventRetentionDays: 180,
 };
 
 export const BRAND = {

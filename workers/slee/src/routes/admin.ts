@@ -7,6 +7,7 @@ import { render, sendTemplate } from "../engine/send";
 import { runScheduler, sentToday } from "../engine/scheduler";
 import { SEQUENCES, SEQ_BY_ID } from "../engine/sequences";
 import { TEMPLATES } from "../templates";
+import { handleDeliverability } from "./deliverability";
 
 export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext, path: string) {
   const url = new URL(req.url);
@@ -28,7 +29,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
         clicks_by_template_7d: await q(`SELECT s.template, COUNT(DISTINCT k.contact_id) clickers FROM clicks k JOIN sends s ON s.id = k.send_id WHERE k.clicked_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1`),
         suppressions: await q("SELECT reason, COUNT(*) n FROM suppressions GROUP BY 1"),
         contacts_by_deliverability: await q("SELECT deliverability, COUNT(*) n FROM contacts GROUP BY 1"),
-        bounces_by_type_7d: await q(`SELECT type, COUNT(*) n, COUNT(DISTINCT email) contacts FROM bounce_log WHERE created_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1`),
+        email_events_7d: await q(`SELECT type, COUNT(*) n, COUNT(DISTINCT email) contacts FROM email_events WHERE created_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1 ORDER BY n DESC`),
         feedback_outbox_pending: (await env.DB.prepare("SELECT COUNT(*) n FROM feedback_outbox").first<{ n: number }>())?.n ?? 0,
       });
     }
@@ -43,6 +44,9 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       ]);
       return json({ contact: { ...c, attrs: JSON.parse(c.attrs) }, enrollments: enr.results, sends: sends.results, events: events.results });
     }
+
+    case "GET /v1/admin/deliverability":
+      return handleDeliverability(env, url);
 
     case "GET /v1/admin/sequences":
       return json(SEQUENCES.map((s) => ({ id: s.id, description: s.description, triggers: s.triggers, exitOn: s.exitOn ?? [],

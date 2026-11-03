@@ -4,6 +4,7 @@ import { SEQ_BY_ID } from "./sequences";
 import { sendTemplate } from "./send";
 import { suppress } from "./suppress";
 import { flushFeedback } from "./feedback";
+import { DELIVERABILITY } from "../config";
 
 type DueRow = Contact & { enrollment_id: number; sequence: string; step: number; enrolled_at: string };
 
@@ -17,6 +18,15 @@ export async function sentToday(env: Env) {
 export async function runScheduler(env: Env) {
   const report = { processed: 0, sent: 0, skipped: 0, deferred: 0, completed: 0, sunset: 0, failed: 0, capped: false, feedback: { sent: 0, failed: 0 } };
   report.feedback = await flushFeedback(env, 3);
+
+  // Hourly housekeeping: event retention + old counters (2 queries).
+  if (new Date().getUTCMinutes() < 5) {
+    const cutoff = new Date(Date.now() - DELIVERABILITY.eventRetentionDays * 864e5).toISOString();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM email_events WHERE created_at < ?").bind(cutoff),
+      env.DB.prepare("DELETE FROM daily_counters WHERE day < ?").bind(cutoff.slice(0, 10)),
+    ]);
+  }
 
   const cap = Number(env.DAILY_SEND_CAP || 250);
   let remaining = cap - (await sentToday(env));
