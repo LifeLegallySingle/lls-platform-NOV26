@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+workers/slee/import/
+*.log
+.DS_Store
+# never commit contact exports
+*.csv
+*Brevo_Segmented*.xlsx

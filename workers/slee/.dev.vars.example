@@ -1,0 +1,5 @@
+HUB_SHARED_SECRET=dev-hub-secret-change-me
+LINK_SECRET=dev-link-secret-change-me
+ADMIN_TOKEN=dev-admin-token
+BREVO_API_KEY=xkeysib-...
+BREVO_WEBHOOK_TOKEN=dev-brevo-token

@@ -1,0 +1,21 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  slee:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: workers/slee } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: workers/slee/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+  wp-plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP lint all plugins
+        run: find wp-plugins -name '*.php' -print0 | xargs -0 -n1 php -l

@@ -1,0 +1,39 @@
+# Push one WordPress plugin from this repo to Lightsail (CloudPanel) over SSH, with an automatic backup first.
+# Secrets: LIGHTSAIL_HOST, LIGHTSAIL_USER (CloudPanel site user), LIGHTSAIL_SSH_KEY, WP_ROOT (e.g. /home/<site-user>/htdocs/legallysingle.com)
+name: Deploy WP plugin
+on:
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: "Folder under wp-plugins/ (e.g. lls-slee-bridge, lls-hub)"
+        required: true
+        default: lls-slee-bridge
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate
+        run: |
+          test -d "wp-plugins/${{ inputs.plugin }}" || { echo "No such plugin folder"; exit 1; }
+          find "wp-plugins/${{ inputs.plugin }}" -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts
+      - name: Backup current plugin on server
+        run: |
+          ssh ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+            'P="${{ secrets.WP_ROOT }}/wp-content/plugins"; mkdir -p ~/plugin-backups; \
+             [ -d "$P/${{ inputs.plugin }}" ] && tar czf ~/plugin-backups/${{ inputs.plugin }}-$(date +%Y%m%d-%H%M%S).tgz -C "$P" "${{ inputs.plugin }}" || true'
+      - name: Rsync plugin
+        run: |
+          rsync -az --delete --exclude '.git*' --exclude 'README.md' \
+            "wp-plugins/${{ inputs.plugin }}/" \
+            "${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:${{ secrets.WP_ROOT }}/wp-content/plugins/${{ inputs.plugin }}/"
+      - name: Verify WordPress still loads
+        run: |
+          ssh ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+            'cd "${{ secrets.WP_ROOT }}" && wp plugin list --name="${{ inputs.plugin }}" --fields=name,status,version && wp eval "echo \"WP OK\n\";"'

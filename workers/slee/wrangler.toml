@@ -18,7 +18,7 @@ crons = ["*/5 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "slee"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"   # from: npx wrangler d1 create slee
+database_id = "b257e264-eaae-48d9-bb6c-cf9e5eeac444"   # slee (ENAM), created 2026-11-03
 migrations_dir = "migrations"
 
 [vars]
