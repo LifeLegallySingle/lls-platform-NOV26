@@ -4,6 +4,7 @@ name = "slee"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 workers_dev = true
+preview_urls = false   # no per-version preview URLs (keeps the admin API on one URL)
 
 # Uncomment once DNS for legallysingle.com is on Cloudflare (it is) to send tracked links from your own domain:
 # routes = [{ pattern = "slee.legallysingle.com", custom_domain = true }]
