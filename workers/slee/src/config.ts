@@ -6,7 +6,7 @@ export const LINKS = {
   sahQuiz: "/single-at-heart-by-bella-depaulo/",
   glotype: "/glotype",
   powerMove: "/#lls-power-move",
-  freedomTax: "/freedom-tax-calculator/", // TODO: confirm live Freedom Tax™ Calculator URL
+  freedomTax: "/freedom-tax-calculator/",
   unweddedWallet: "/unweddedwallet/",
   selfPartnered: "/self-partnered-system/",
   datebase: "/datebase/",
@@ -22,5 +22,5 @@ export const BRAND = {
   muted: "#6B6B6B",
   bg: "#F7F5F0",
   card: "#FFFFFF",
-  signoff: "— Jennifer, Life Legally Single™",
+  signoff: "— Jen, Life Legally Single™",
 };
