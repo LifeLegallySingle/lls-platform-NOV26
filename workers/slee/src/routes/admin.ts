@@ -27,6 +27,8 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
         sends_by_template_7d: await q(`SELECT template, status, COUNT(*) n FROM sends WHERE sent_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1,2`),
         clicks_by_template_7d: await q(`SELECT s.template, COUNT(DISTINCT k.contact_id) clickers FROM clicks k JOIN sends s ON s.id = k.send_id WHERE k.clicked_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1`),
         suppressions: await q("SELECT reason, COUNT(*) n FROM suppressions GROUP BY 1"),
+        contacts_by_deliverability: await q("SELECT deliverability, COUNT(*) n FROM contacts GROUP BY 1"),
+        bounces_by_type_7d: await q(`SELECT type, COUNT(*) n, COUNT(DISTINCT email) contacts FROM bounce_log WHERE created_at >= '${new Date(Date.now() - 7 * 864e5).toISOString()}' GROUP BY 1`),
         feedback_outbox_pending: (await env.DB.prepare("SELECT COUNT(*) n FROM feedback_outbox").first<{ n: number }>())?.n ?? 0,
       });
     }
@@ -78,7 +80,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       const c: Contact = real ?? {
         id: 0, email: "preview@example.com", hub_id: null, firstname: "Ana", attrs: "{}", sah_score: 13, sah_tier: "TRUE",
         glotype: null, power_move: "Wallet", cia_tier: "WARM", cohort: null, quality: "ok", identify_qs: null, status: "active",
-        clicks: 0, last_click_at: null, last_sent_at: null, created_at: nowIso(), updated_at: nowIso(), ...(body.contact || {}),
+        clicks: 0, last_click_at: null, last_sent_at: null, soft_bounces: 0, last_soft_bounce_at: null, deliverability: "ok", created_at: nowIso(), updated_at: nowIso(), ...(body.contact || {}),
       };
       const r = await render(env, c, body.template, "preview");
       return url.searchParams.get("format") === "json" ? json({ subject: r.subject, text: r.text }) : html(r.html);

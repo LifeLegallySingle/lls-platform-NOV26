@@ -15,6 +15,13 @@ export const LINKS = {
   dashboard: "/soloachievers/",
 };
 
+/** Deliverability rules (soft bounces counted within a rolling window). */
+export const DELIVERABILITY = {
+  softBounceWindowDays: 30,
+  unreliableAt: 2,   // flag as "unreliable" (still mailed)
+  suppressAt: 3,     // suppress (lifts automatically on click / quiz / opt-in)
+};
+
 export const BRAND = {
   name: "Life Legally Single™",
   accent: "#B8860B",   // TODO: swap for official brand accent

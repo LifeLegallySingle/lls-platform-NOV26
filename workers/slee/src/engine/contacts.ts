@@ -75,7 +75,7 @@ export const REACTIVATING_SIGNALS = new Set([
   "sah_quiz.completed", "glotype.completed", "power_move.optin", "freedom_tax.calculated",
   "datebase.matched", "optin.subscribed", "ailife.subscribed",
 ]);
-export const LIFTABLE_REASONS = new Set(["bot", "suspect", "sunset"]);
+export const LIFTABLE_REASONS = new Set(["bot", "suspect", "sunset", "soft_bounce"]);
 
 export async function maybeReactivate(env: Env, c: Contact, signals: string[]): Promise<Contact> {
   if (c.status !== "suppressed" || !signals.some((x) => REACTIVATING_SIGNALS.has(x))) return c;
@@ -83,7 +83,7 @@ export async function maybeReactivate(env: Env, c: Contact, signals: string[]): 
   if (sup && !LIFTABLE_REASONS.has(sup.reason)) return c;
   await env.DB.batch([
     env.DB.prepare("DELETE FROM suppressions WHERE email = ?").bind(c.email),
-    env.DB.prepare("UPDATE contacts SET status = 'active', quality = 'ok', updated_at = ? WHERE id = ?").bind(nowIso(), c.id),
+    env.DB.prepare("UPDATE contacts SET status = 'active', quality = 'ok', soft_bounces = 0, updated_at = ? WHERE id = ?").bind(nowIso(), c.id),
   ]);
   return { ...c, status: "active", quality: "ok" };
 }

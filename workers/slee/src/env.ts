@@ -39,6 +39,9 @@ export interface Contact {
   clicks: number;
   last_click_at: string | null;
   last_sent_at: string | null;
+  soft_bounces: number;
+  last_soft_bounce_at: string | null;
+  deliverability: string;
   created_at: string;
   updated_at: string;
 }

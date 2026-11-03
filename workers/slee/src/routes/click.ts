@@ -36,7 +36,7 @@ export async function handleClick(env: Env, ctx: ExecutionContext, sendId: strin
       const cia = ciaTier({ ...contact, clicks }, parseAttrs(contact));
       await env.DB.batch([
         env.DB.prepare("INSERT INTO clicks (send_id, contact_id, url) VALUES (?,?,?)").bind(sendId, contact.id, dest),
-        env.DB.prepare("UPDATE contacts SET clicks = ?, last_click_at = ?, cia_tier = ?, updated_at = ? WHERE id = ?")
+        env.DB.prepare("UPDATE contacts SET clicks = ?, last_click_at = ?, cia_tier = ?, soft_bounces = 0, deliverability = 'ok', updated_at = ? WHERE id = ?")
           .bind(clicks, now, cia, now, contact.id),
       ]);
       await applySignals(env, { ...contact, clicks, cia_tier: cia }, ["email.clicked"]);
