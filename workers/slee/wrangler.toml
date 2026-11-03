@@ -23,7 +23,7 @@ migrations_dir = "migrations"
 
 [vars]
 SITE_URL = "https://legallysingle.com"
-PUBLIC_BASE_URL = "https://slee.YOUR-SUBDOMAIN.workers.dev"          # change to https://slee.legallysingle.com after custom domain
+PUBLIC_BASE_URL = "https://slee.legallysingle-com-cloudflare.workers.dev"   # change to https://slee.legallysingle.com after custom domain
 HUB_FEEDBACK_URL = "https://legallysingle.com/wp-json/lls-slee/v1/feedback"
 IDENTIFY_DOMAINS = "legallysingle.com,www.legallysingle.com"
 SENDER_EMAIL = "hello@legallysingle.com"
