@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       LLS SLEE Bridge
  * Description:       Connects LLS HUB to SLEE (Single Life Email Engine) on Cloudflare Workers. Signs HUB→SLEE events, retries anything that fails, and receives SLEE→HUB engagement feedback (clicks, unsubscribes, bounces).
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires PHP:      7.4
  * Author:            Life Legally Single™
  * Text Domain:       lls-slee-bridge
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('LLS_SLEE_BRIDGE_VERSION', '1.0.0');
+define('LLS_SLEE_BRIDGE_VERSION', '1.0.1');
 define('LLS_SLEE_OUTBOX_TABLE', 'lls_slee_outbox');
 
 /* -------------------------------------------------------------------------
@@ -48,9 +48,9 @@ function lls_slee_sign($body) {
  * Identity restore: attach HUB's signed identify query string to every event,
  * so every email CTA lands the person back in their HUB identity (fixes bare-URL Item #4 for SLEE mail).
  * ---------------------------------------------------------------------- */
-function lls_slee_identify_qs($email, $hub_id = null) {
-    $qs = apply_filters('lls_slee_identify_qs', null, $email, $hub_id);
-    if ($qs !== null) { return (string) $qs; }
+function lls_slee_identify_url($email, $hub_id = null) {
+    $override = apply_filters('lls_slee_identify_url', null, $email, $hub_id);
+    if ($override !== null) { return (string) $override; }
     if (!function_exists('lls_hub_generate_identify_url')) { return ''; }
 
     try {
@@ -72,8 +72,7 @@ function lls_slee_identify_qs($email, $hub_id = null) {
             }
         }
         $url = (string) call_user_func_array('lls_hub_generate_identify_url', $args);
-        $q   = wp_parse_url($url, PHP_URL_QUERY);
-        return $q ? (string) $q : '';
+        return wp_http_validate_url($url) ? $url : '';
     } catch (\Throwable $e) {
         return '';
     }
@@ -82,10 +81,15 @@ function lls_slee_identify_qs($email, $hub_id = null) {
 function lls_slee_enrich(array $payload) {
     $email = '';
     foreach (array('email', 'EMAIL') as $k) { if (!empty($payload[$k])) { $email = (string) $payload[$k]; break; } }
-    if ($email && empty($payload['identify_qs'])) {
+    if ($email && empty($payload['identify_url'])) {
         $hub = isset($payload['hub_id']) ? $payload['hub_id'] : (isset($payload['identity_id']) ? $payload['identity_id'] : null);
-        $qs  = lls_slee_identify_qs($email, $hub);
-        if ($qs) { $payload['identify_qs'] = $qs; }
+        $url = lls_slee_identify_url($email, $hub);
+        if ($url) {
+            // Full URL keeps HUB's identify path; SLEE swaps its redirect for the page actually clicked.
+            $payload['identify_url'] = $url;
+            $q = wp_parse_url($url, PHP_URL_QUERY);
+            if ($q) { $payload['identify_qs'] = $q; }
+        }
     }
     if (empty($payload['event_id'])) { $payload['event_id'] = wp_generate_uuid4(); }
     if (empty($payload['occurred_at'])) { $payload['occurred_at'] = gmdate('c'); }

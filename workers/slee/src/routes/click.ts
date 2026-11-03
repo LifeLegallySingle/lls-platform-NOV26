@@ -25,9 +25,9 @@ export async function handleClick(env: Env, ctx: ExecutionContext, sendId: strin
     if (send?.template) u.searchParams.set("utm_content", send.template);
   }
   const identifyHosts = env.IDENTIFY_DOMAINS.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (contact?.identify_qs && identifyHosts.includes(u.hostname.toLowerCase())) {
-    for (const [k, v] of new URLSearchParams(contact.identify_qs)) u.searchParams.set(k, v);
-  }
+  const target = contact?.identify_qs && identifyHosts.includes(u.hostname.toLowerCase())
+    ? withIdentity(contact.identify_qs, u.toString())
+    : u.toString();
 
   if (contact && send) {
     ctx.waitUntil((async () => {
@@ -43,5 +43,27 @@ export async function handleClick(env: Env, ctx: ExecutionContext, sendId: strin
       await queueFeedback(env, contact, "email.clicked", { url: dest, sequence: send.sequence, template: send.template, cia_tier: cia });
     })());
   }
-  return Response.redirect(u.toString(), 302);
+  return Response.redirect(target, 302);
+}
+
+const REDIRECT_KEYS = ["redirect", "redirect_to", "redirect_url", "return", "return_to", "dest", "next"];
+
+/**
+ * HUB identity restore that lands on the clicked page (not the URL baked into the token link).
+ * - Full identify URL (e.g. https://site/wp-json/lls-hub/v1/identify?token=…&redirect=…): keep its path + token,
+ *   swap its redirect param for the clicked destination.
+ * - Query string only: append token params to the destination; any redirect-style param points at the destination.
+ */
+export function withIdentity(identify: string, dest: string): string {
+  if (/^https?:\/\//i.test(identify)) {
+    try {
+      const idu = new URL(identify);
+      const key = REDIRECT_KEYS.find((k) => idu.searchParams.has(k)) ?? "redirect";
+      idu.searchParams.set(key, dest);
+      return idu.toString();
+    } catch { return dest; }
+  }
+  const d = new URL(dest);
+  for (const [k, v] of new URLSearchParams(identify)) d.searchParams.set(k, REDIRECT_KEYS.includes(k) ? dest : v);
+  return d.toString();
 }

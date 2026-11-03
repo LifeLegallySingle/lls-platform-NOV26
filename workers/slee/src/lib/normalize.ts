@@ -53,7 +53,8 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
   }
 
   const hub = pick(raw, "hub_id", "identity_id", "uuid", "lls_id");
-  const iq = pick(raw, "identify_qs");
+  // Prefer the full HUB identify URL (keeps its path, e.g. a REST endpoint); fall back to just the query string.
+  const iq = pick(raw, "identify_url") ?? pick(raw, "identify_qs");
   return {
     v: 1,
     event_id: String(pick(raw, "event_id", "id") ?? (await sha256Hex(rawBody)).slice(0, 32)),
@@ -62,7 +63,7 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
     email,
     hub_id: hub !== undefined ? String(hub) : undefined,
     attrs,
-    identify_qs: iq ? String(iq).replace(/^\?/, "") : undefined,
+    identify_qs: iq ? (/^https?:\/\//i.test(String(iq)) ? String(iq) : String(iq).replace(/^\?/, "")) : undefined,
     source: String(pick(raw, "source_system", "origin") ?? "hub"),
   };
 }
