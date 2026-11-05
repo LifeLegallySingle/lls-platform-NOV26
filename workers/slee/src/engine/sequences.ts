@@ -61,7 +61,7 @@ export const SEQUENCES: Sequence[] = [
     description: "Plain opt-ins ([lls_hub_optin], homepage) — pick-your-door welcome",
     triggers: ["optin.subscribed"],
     exitOn: ["sah_quiz.completed"],
-    eligible: (c) => c.sah_score == null,
+    eligible: (c) => c.sah_score == null && !c.power_move && !c.glotype, // plain opt-ins only; product journeys cover the rest
     steps: [
       { delayHours: 0, template: "welcome_1" },
       { delayHours: 72, template: "welcome_2" },

@@ -18,6 +18,22 @@ const TYPE_ALIASES: Record<string, string> = {
   optin: "optin.subscribed",
   lls_hub_optin: "optin.subscribed",
   identify: "identity.updated",
+  google_login: "auth.google_login",
+};
+
+/** HUB native events use generic names (quiz_completed…) + properties.product — map by product. */
+const PRODUCT_TYPES: Record<string, string> = {
+  sah_quiz: "sah_quiz.completed",
+  glotype: "glotype.completed",
+  power_move_optin: "power_move.optin",
+  power_move: "power_move.optin",
+  ailife_coach: "ailife.subscribed",
+  freedom_tax: "freedom_tax.calculated",
+  freedom_tax_calculator: "freedom_tax.calculated",
+  datebase: "datebase.matched",
+  hub_optin: "optin.subscribed",
+  lls_hub_optin: "optin.subscribed",
+  google_auth: "auth.google_login",
 };
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -38,9 +54,9 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
   if (!EMAIL_RE.test(email)) return { error: "invalid_email" };
 
   const rawType = String(pick(raw, "type", "event", "event_type", "source") ?? "identity.updated").toLowerCase();
-  const type = TYPE_ALIASES[rawType] ?? rawType;
 
-  const attrsIn = pick(raw, "attrs", "attributes", "data", "payload") ?? {};
+  // HUB v5.8+ sends { event, properties:{…, product} }
+  const attrsIn = pick(raw, "attrs", "attributes", "properties", "data", "payload") ?? {};
   const attrs: Record<string, unknown> = {};
   if (attrsIn && typeof attrsIn === "object") {
     for (const [k, v] of Object.entries(attrsIn)) attrs[k.toLowerCase()] = v;
@@ -51,6 +67,10 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
     const v = pick(raw, k);
     if (v !== undefined && attrs[k] === undefined) attrs[k] = v;
   }
+
+  const product = String(attrs.product ?? pick(raw, "product") ?? "").toLowerCase();
+  const type = TYPE_ALIASES[rawType] ?? PRODUCT_TYPES[product] ?? rawType;
+  for (const k of ["product", "event_name", "source"]) delete attrs[k]; // routing metadata, not profile data
 
   const hub = pick(raw, "hub_id", "identity_id", "uuid", "lls_id");
   // Prefer the full HUB identify URL (keeps its path, e.g. a REST endpoint); fall back to just the query string.
