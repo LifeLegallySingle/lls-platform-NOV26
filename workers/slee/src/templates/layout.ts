@@ -24,11 +24,15 @@ You're getting this because you joined ${esc(BRAND.name)}.<br>${esc(o.address)}<
 
 export function htmlToText(h: string) {
   return h
+    .replace(/<head[\s\S]*?<\/head>/i, "")
+    .replace(/<div style="display:none[^"]*">[\s\S]*?<\/div>/i, "") // hidden preheader
     .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)")
     .replace(/<(br|\/p|\/h\d|\/li)>/gi, "\n")
     .replace(/<li[^>]*>/gi, "• ")
     .replace(/<[^>]+>/g, "")
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#\d+;/g, "")
+    .replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
