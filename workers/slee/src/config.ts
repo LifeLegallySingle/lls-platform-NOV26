@@ -28,7 +28,7 @@ export const DELIVERABILITY = {
 
 export const BRAND = {
   name: "Life Legally Single™",
-  accent: "#B8860B",   // TODO: swap for official brand accent
+  accent: "#6427b0",   // LLS brand purple
   ink: "#141414",
   muted: "#6B6B6B",
   bg: "#F7F5F0",
