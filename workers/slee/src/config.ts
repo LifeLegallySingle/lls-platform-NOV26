@@ -26,6 +26,17 @@ export const DELIVERABILITY = {
   eventRetentionDays: 180,
 };
 
+/**
+ * Brevo is a secondary copy fed ONLY by SLEE. One Brevo list per entry source.
+ * Lists are auto-created in a "SLEE" folder (names below) on the first cron run; IDs land in D1 table brevo_lists.
+ * To reuse existing Brevo lists instead, set var BREVO_LIST_MAP = '{"sah_quiz":12, ...}' in wrangler.toml.
+ */
+export const BREVO_SYNC = {
+  folderName: "SLEE",
+  listName: (source: string) => `SLEE · ${source}`,
+  sources: ["blueprint", "site_optin", "self_love_glow_letters", "power_move_optin", "sah_quiz", "glotype", "freedom_tax"],
+};
+
 export const BRAND = {
   name: "Life Legally Single™",
   accent: "#6427b0",   // LLS brand purple

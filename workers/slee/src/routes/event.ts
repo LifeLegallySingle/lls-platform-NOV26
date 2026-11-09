@@ -4,9 +4,10 @@ import { verifySigned } from "../lib/crypto";
 import { normalize } from "../lib/normalize";
 import { inferSignals, maybeReactivate, upsertContact } from "../engine/contacts";
 import { applySignals } from "../engine/enroll";
+import { sourceForEvent, syncToBrevo } from "../engine/brevo-sync";
 
 /** POST /v1/event — HUB -> SLEE. HMAC-signed, idempotent, accepts HUB's native payload. */
-export async function handleEvent(req: Request, env: Env) {
+export async function handleEvent(req: Request, env: Env, ctx: ExecutionContext) {
   const body = await req.text();
   if (!(await verifySigned(env.HUB_SHARED_SECRET, req.headers.get("x-lls-timestamp"), body, req.headers.get("x-lls-signature")))) {
     return json({ ok: false, error: "bad_signature" }, 401);
@@ -20,11 +21,11 @@ export async function handleEvent(req: Request, env: Env) {
   if (list.length > 3) return json({ ok: false, error: "max_3_events_per_request" }, 413);
 
   const results = [];
-  for (const item of list) results.push(await ingestOne(env, item, list.length > 1 ? JSON.stringify(item) : body));
+  for (const item of list) results.push(await ingestOne(env, ctx, item, list.length > 1 ? JSON.stringify(item) : body));
   return json(list.length === 1 ? results[0] : { ok: true, results }, 202);
 }
 
-async function ingestOne(env: Env, raw: unknown, rawBody: string) {
+async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody: string) {
   const ev = await normalize(raw, rawBody);
   if ("error" in ev) return { ok: false, error: ev.error };
 
@@ -40,5 +41,9 @@ async function ingestOne(env: Env, raw: unknown, rawBody: string) {
   await env.DB.prepare("UPDATE events SET contact_id = ?, signals = ? WHERE event_id = ?")
     .bind(contact.id, JSON.stringify(signals), ev.event_id).run();
 
-  return { ok: true, event_id: ev.event_id, contact_id: contact.id, status: contact.status, signals, enrolled, exited };
+  // SLEE → Brevo secondary copy (never blocks ingest; retries via outbox).
+  const brevoSource = sourceForEvent(ev);
+  if (brevoSource) ctx.waitUntil(syncToBrevo(env, contact, brevoSource));
+
+  return { ok: true, event_id: ev.event_id, contact_id: contact.id, status: contact.status, signals, enrolled, exited, brevo_source: brevoSource };
 }

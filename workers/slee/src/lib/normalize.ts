@@ -71,6 +71,13 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
   const product = String(attrs.product ?? pick(raw, "product") ?? "").toLowerCase();
   const type = TYPE_ALIASES[rawType] ?? PRODUCT_TYPES[product] ?? rawType;
   for (const k of ["product", "event_name", "source"]) delete attrs[k]; // routing metadata, not profile data
+  // HUB bug workaround: page_source arrives as the opt-in slug ("blueprint"); keep it a URL when one exists.
+  const ps = attrs.page_source;
+  if (typeof ps === "string" && !/^https?:\/\//i.test(ps)) {
+    if (!attrs.optin_source) attrs.optin_source = ps;
+    const url = attrs.page_url ?? attrs.source_url;
+    if (url) attrs.page_source = url; else delete attrs.page_source;
+  }
 
   const hub = pick(raw, "hub_id", "identity_id", "uuid", "lls_id");
   // Prefer the full HUB identify URL (keeps its path, e.g. a REST endpoint); fall back to just the query string.
@@ -85,5 +92,6 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
     attrs,
     identify_qs: iq ? (/^https?:\/\//i.test(String(iq)) ? String(iq) : String(iq).replace(/^\?/, "")) : undefined,
     source: String(pick(raw, "source_system", "origin") ?? "hub"),
+    product: product || undefined,
   };
 }

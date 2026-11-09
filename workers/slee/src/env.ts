@@ -19,6 +19,8 @@ export interface Env {
   BATCH_SIZE: string;
   MIN_HOURS_BETWEEN_EMAILS: string;
   DRY_RUN: string;
+  BREVO_LIST_MAP?: string;   // optional JSON override {source: listId}
+  BREVO_API_BASE?: string;   // tests only
 }
 
 export interface Contact {
@@ -42,6 +44,8 @@ export interface Contact {
   soft_bounces: number;
   last_soft_bounce_at: string | null;
   deliverability: string;
+  brevo_synced_at: string | null;
+  brevo_error: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +61,7 @@ export interface SleeEvent {
   attrs: Record<string, unknown>;
   identify_qs?: string;
   source: string;
+  product?: string;          // HUB product slug (sah_quiz, hub_optin, glotype…)
 }
 
 export const nowIso = () => new Date().toISOString();

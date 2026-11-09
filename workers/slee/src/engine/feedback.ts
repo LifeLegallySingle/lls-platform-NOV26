@@ -1,6 +1,7 @@
 import type { Contact, Env } from "../env";
 import { nowIso } from "../env";
 import { signedHeaders } from "../lib/crypto";
+import { upsertBrevoContact } from "./brevo-sync";
 
 /** SLEE -> HUB: engagement events land back on the HUB identity (closes the loop for CIA scoring). */
 export async function queueFeedback(env: Env, c: Pick<Contact, "email" | "hub_id">, type: string, data: Record<string, unknown> = {}) {
@@ -12,7 +13,7 @@ export async function queueFeedback(env: Env, c: Pick<Contact, "email" | "hub_id
 export async function flushFeedback(env: Env, limit = 10) {
   if (!env.HUB_FEEDBACK_URL) return { sent: 0, failed: 0 };
   const { results } = await env.DB.prepare(
-    "SELECT id, payload, attempts FROM feedback_outbox WHERE next_at <= ? AND attempts < 12 ORDER BY id LIMIT ?"
+    "SELECT id, payload, attempts FROM feedback_outbox WHERE target = 'hub' AND next_at <= ? AND attempts < 12 ORDER BY id LIMIT ?"
   ).bind(nowIso(), limit).all<{ id: number; payload: string; attempts: number }>();
   let sent = 0, failed = 0;
   for (const row of results) {
@@ -36,6 +37,29 @@ export async function flushFeedback(env: Env, limit = 10) {
     const backoffMin = Math.min(2 ** row.attempts * 5, 720); // 5m → 12h
     await env.DB.prepare("UPDATE feedback_outbox SET attempts = attempts + 1, last_error = ?, next_at = ? WHERE id = ?")
       .bind(err.slice(0, 300), new Date(Date.now() + backoffMin * 60_000).toISOString(), row.id).run();
+  }
+  return { sent, failed };
+}
+
+/** Retry queued SLEE → Brevo upserts (target='brevo'). */
+export async function flushBrevo(env: Env, limit = 3) {
+  const { results } = await env.DB.prepare(
+    "SELECT id, payload, attempts FROM feedback_outbox WHERE target = 'brevo' AND next_at <= ? AND attempts < 12 ORDER BY id LIMIT ?"
+  ).bind(nowIso(), limit).all<{ id: number; payload: string; attempts: number }>();
+  let sent = 0, failed = 0;
+  for (const row of results) {
+    const p = JSON.parse(row.payload) as { contact_id: number; source: string };
+    const c = await env.DB.prepare("SELECT * FROM contacts WHERE id = ?").bind(p.contact_id).first<Contact>();
+    const res = c ? await upsertBrevoContact(env, c, p.source) : "ok";
+    if (res === "ok" || res === "fail") {
+      await env.DB.prepare("DELETE FROM feedback_outbox WHERE id = ?").bind(row.id).run();
+      res === "ok" ? sent++ : failed++;
+    } else {
+      failed++;
+      const backoffMin = Math.min(2 ** row.attempts * 5, 720);
+      await env.DB.prepare("UPDATE feedback_outbox SET attempts = attempts + 1, next_at = ? WHERE id = ?")
+        .bind(new Date(Date.now() + backoffMin * 60_000).toISOString(), row.id).run();
+    }
   }
   return { sent, failed };
 }

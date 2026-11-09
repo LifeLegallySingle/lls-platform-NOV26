@@ -90,7 +90,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       const c: Contact = real ?? {
         id: 0, email: "preview@example.com", hub_id: null, firstname: "Ana", attrs: "{}", sah_score: 13, sah_tier: "TRUE",
         glotype: null, power_move: "Wallet", cia_tier: "WARM", cohort: null, quality: "ok", identify_qs: null, status: "active",
-        clicks: 0, last_click_at: null, last_sent_at: null, soft_bounces: 0, last_soft_bounce_at: null, deliverability: "ok", created_at: nowIso(), updated_at: nowIso(), ...(body.contact || {}),
+        clicks: 0, last_click_at: null, last_sent_at: null, soft_bounces: 0, last_soft_bounce_at: null, deliverability: "ok", brevo_synced_at: null, brevo_error: null, created_at: nowIso(), updated_at: nowIso(), ...(body.contact || {}),
       };
       const r = await render(env, c, body.template, "preview");
       return url.searchParams.get("format") === "json" ? json({ subject: r.subject, text: r.text }) : html(r.html);

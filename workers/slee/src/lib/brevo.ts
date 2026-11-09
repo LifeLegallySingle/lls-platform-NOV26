@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 
-const API = "https://api.brevo.com/v3";
+const DEFAULT_API = "https://api.brevo.com/v3";
+export const brevoApi = (env: Env) => (env.BREVO_API_BASE || DEFAULT_API).replace(/\/$/, "");
 
 export async function brevoSend(env: Env, msg: {
   to: string; toName?: string; subject: string; html: string; text: string;
@@ -21,7 +22,7 @@ export async function brevoSend(env: Env, msg: {
     tags: ["slee", ...msg.tags],
   };
   try {
-    const r = await fetch(`${API}/smtp/email`, {
+    const r = await fetch(`${brevoApi(env)}/smtp/email`, {
       method: "POST",
       headers: { "api-key": env.BREVO_API_KEY, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify(body),
@@ -38,7 +39,7 @@ export async function brevoSend(env: Env, msg: {
 /** Keep Brevo's own list sends (newsletter) in sync with SLEE unsubscribes. */
 export async function brevoBlacklist(env: Env, email: string) {
   if (!env.BREVO_API_KEY) return;
-  await fetch(`${API}/contacts/${encodeURIComponent(email)}`, {
+  await fetch(`${brevoApi(env)}/contacts/${encodeURIComponent(email)}`, {
     method: "PUT",
     headers: { "api-key": env.BREVO_API_KEY, "content-type": "application/json" },
     body: JSON.stringify({ emailBlacklisted: true }),
