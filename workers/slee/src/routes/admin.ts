@@ -7,7 +7,7 @@ import { render, sendTemplate } from "../engine/send";
 import { runScheduler, sentToday } from "../engine/scheduler";
 import { SEQUENCES, SEQ_BY_ID } from "../engine/sequences";
 import { TEMPLATES } from "../templates";
-import { handleDeliverability } from "./deliverability";
+import { handleCampaigns, handleDeliverability, handleEmailReport } from "./deliverability";
 
 export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext, path: string) {
   const url = new URL(req.url);
@@ -47,6 +47,12 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
 
     case "GET /v1/admin/deliverability":
       return handleDeliverability(env, url);
+
+    case "GET /v1/admin/campaigns":
+      return handleCampaigns(env, url);
+
+    case "GET /v1/admin/emails":
+      return handleEmailReport(env, url);
 
     case "GET /v1/admin/sequences":
       return json(SEQUENCES.map((s) => ({ id: s.id, description: s.description, triggers: s.triggers, exitOn: s.exitOn ?? [],

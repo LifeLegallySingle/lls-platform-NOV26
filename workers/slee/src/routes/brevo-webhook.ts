@@ -7,7 +7,8 @@ import { getByEmail } from "../engine/contacts";
 import { DELIVERABILITY } from "../config";
 
 /**
- * POST /v1/webhooks/brevo?token=… — Brevo transactional webhook (SLEE + WP plugin mail).
+ * POST /v1/webhooks/brevo?token=…[&channel=marketing] — Brevo webhooks: transactional (SLEE + WP plugins)
+ * and marketing (campaigns). SLEE is the system of record for ALL email events.
  * Every event → email_events (analytics; capped per day). List-protection events are ALWAYS processed:
  *   hard bounce / invalid / blocked → suppressed (bounced)
  *   spam complaint                  → suppressed (complained)
@@ -28,7 +29,9 @@ const NORMALIZE: Record<string, string> = {
   unique_opened: "unique_opened", uniqueopened: "unique_opened",
   opened: "opened", open: "opened",
   click: "clicked", clicked: "clicked", clicks: "clicked",
+  unique_clicked: "clicked",
   error: "error",
+  list_addition: "", contact_updated: "", contact_deleted: "",  // contact events: not email events
   proxy_open: "proxy_open", loaded_by_proxy: "proxy_open", unique_proxy_open: "proxy_open",
 };
 const SUPPRESS_AS: Record<string, string> = {
@@ -37,7 +40,9 @@ const SUPPRESS_AS: Record<string, string> = {
 const CRITICAL = new Set(["soft_bounce", ...Object.keys(SUPPRESS_AS)]);
 
 export async function handleBrevoWebhook(req: Request, env: Env, ctx: ExecutionContext) {
-  const token = new URL(req.url).searchParams.get("token") || "";
+  const params = new URL(req.url).searchParams;
+  const token = params.get("token") || "";
+  const channel = params.get("channel") === "marketing" ? "marketing" : "transactional";
   if (!env.BREVO_WEBHOOK_TOKEN || !safeEqual(token, env.BREVO_WEBHOOK_TOKEN)) return json({ ok: false }, 401);
   let body: any;
   try { body = await req.json(); } catch { return json({ ok: false, error: "invalid_json" }, 400); }
@@ -51,11 +56,18 @@ export async function handleBrevoWebhook(req: Request, env: Env, ctx: ExecutionC
 
     if (await shouldStore(env, type)) {
       const tags = Array.isArray(it?.tags) ? it.tags.join(",") : it?.tag ?? it?.tags ?? null;
-      await env.DB.prepare("INSERT INTO email_events (email, domain, type, reason, message_id, tag) VALUES (?,?,?,?,?,?)")
+      const campId = it?.camp_id ?? it?.campaign_id ?? it?.["campaign id"] ?? null;
+      const campName = it?.["campaign name"] ?? it?.campaign_name ?? null;
+      const url = it?.URL ?? it?.url ?? it?.link ?? null;
+      await env.DB.prepare("INSERT INTO email_events (email, domain, type, reason, message_id, tag, channel, campaign, campaign_name, url) VALUES (?,?,?,?,?,?,?,?,?,?)")
         .bind(email, email.split("@")[1], type,
           it?.reason ? String(it.reason).slice(0, 300) : null,
           it?.["message-id"] ? String(it["message-id"]) : null,
-          tags ? String(tags).slice(0, 200) : null).run();
+          tags ? String(tags).slice(0, 200) : null,
+          campId !== null ? "marketing" : channel,
+          campId !== null ? String(campId) : null,
+          campName ? String(campName).slice(0, 200) : null,
+          url ? String(url).slice(0, 500) : null).run();
       out.logged++;
     } else out.skipped_cap++;
 
