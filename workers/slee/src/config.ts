@@ -35,7 +35,12 @@ export const BREVO_SYNC = {
   folderName: "SLEE",
   listName: (source: string) => `SLEE · ${source}`,
   /** Sources SLEE auto-provisions lists for. ANY form source is accepted; others need a list in BREVO_LIST_MAP. */
-  knownSources: ["blueprint", "site_optin", "self_love_glow", "power_move_optin", "sah_quiz", "glotype", "freedom_tax"],
+  knownSources: [
+    "blueprint", "site_optin", "self_love_glow", "power_move_optin", "sah_quiz", "glotype", "freedom_tax",
+    // Brevo-form replacements (approved Nov 10, 2026)
+    "dating_coach_waitlist", "datebase_waitlist", "solo_dating_waitlist", "alissha_waitlist_solo_travel",
+    "solo_travel_deals", "memes", "unweddedwallet", "post_10_reasons_stay_single",
+  ],
 };
 
 export const BRAND = {
