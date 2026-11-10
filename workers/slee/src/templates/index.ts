@@ -1,6 +1,7 @@
 import type { Contact } from "../env";
 import { BRAND, LINKS } from "../config";
 import { esc } from "./layout";
+import { quoteFor } from "./quotes";
 
 export interface TCtx {
   c: Contact;
@@ -15,6 +16,8 @@ const p = (s: string) => `<p style="margin:0 0 16px;">${s}</p>`;
 const h = (s: string) => `<h1 style="margin:0 0 16px;font:700 24px/1.25 Georgia,'Times New Roman',serif;">${s}</h1>`;
 const btn = (x: TCtx, path: string, label: string) =>
   `<p style="margin:24px 0;"><a href="${x.url(path)}" style="display:inline-block;background:${BRAND.ink};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600;">${esc(label)}</a></p>`;
+const quote = (x: TCtx) =>
+  `<p style="margin:0 0 20px;padding:12px 16px;border-left:4px solid ${BRAND.accent};font:italic 18px/1.45 Georgia,'Times New Roman',serif;color:${BRAND.ink};">“${esc(quoteFor(x.c.id))}”</p>`;
 const a = (x: TCtx, path: string, label: string) => `<a href="${x.url(path)}" style="color:${BRAND.accent};">${esc(label)}</a>`;
 
 /* ---------- SAH tier copy (one place to edit) ---------- */
@@ -171,13 +174,15 @@ export const TEMPLATES: Record<string, Tpl> = {
   }),
 
   deals_1: (x) => ({
-    subject: "You’re on the Singles Only deal list",
-    preheader: "Deals picked for people who shop for one.",
-    body: h("You’re in.") +
-      p("You’ll be first to hear about exclusive Singles Only offers: deals picked for people who shop for one, travel solo and treat themselves on purpose.") +
-      p("Singles Day is the one shopping holiday made for us. Start with this year’s picks:") +
-      btn(x, "/singles-day-deals/", "See the Singles Day deals") +
-      p(`Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
+    subject: "You’re in: Singles Only deals, coming your way",
+    preheader: "One cart. Zero compromises. No plus-one required.",
+    body: h("You’re in. No plus-one required.") +
+      quote(x) +
+      p("Welcome to the Singles Only deal list: offers picked for people who shop for one, travel solo and treat themselves on purpose. No couples’ bundles. No “buy two” guilt.") +
+      p("Singles Day (11.11) is the one shopping holiday made for us. Start with this year’s picks:") +
+      btn(x, "/singles-day-deals/", "Shop the Singles Day deals") +
+      p(`<strong>Thinking about solo travel?</strong> Check out the deals: ${a(x, "/solo-travel/deals/", "Solo Travel Deals")}`) +
+      p(`P.S. Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
   }),
 
   /* ---------- Re-engagement (legacy, pre-HUB) ---------- */
