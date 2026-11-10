@@ -54,6 +54,22 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     case "GET /v1/admin/emails":
       return handleEmailReport(env, url);
 
+    /** Who signed up through a form: /v1/admin/source?name=community_childfree */
+    case "GET /v1/admin/source": {
+      const name = (url.searchParams.get("name") || "").toLowerCase();
+      if (!name) {
+        const { results } = await env.DB.prepare(
+          "SELECT j.value AS source, COUNT(*) n FROM contacts c, json_each(c.attrs, '$.sources') j GROUP BY 1 ORDER BY n DESC"
+        ).all();
+        return json({ sources: results });
+      }
+      const { results } = await env.DB.prepare(
+        `SELECT c.email, c.status, json_extract(c.attrs,'$.first_source') first_source, json_extract(c.attrs,'$.source_dates.' || ?1) signed_up_at
+           FROM contacts c, json_each(c.attrs, '$.sources') j WHERE j.value = ?1 ORDER BY signed_up_at DESC LIMIT 500`
+      ).bind(name).all();
+      return json({ source: name, count: results.length, contacts: results });
+    }
+
     case "GET /v1/admin/sequences":
       return json(SEQUENCES.map((s) => ({ id: s.id, description: s.description, triggers: s.triggers, exitOn: s.exitOn ?? [],
         steps: s.steps.map((st) => ({ delayHours: st.delayHours, template: st.template, action: st.action, conditional: !!st.when })) })));

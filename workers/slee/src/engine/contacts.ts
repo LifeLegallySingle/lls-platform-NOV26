@@ -19,10 +19,24 @@ function clean(a: Record<string, unknown>) {
 export async function upsertContact(
   env: Env,
   ev: Pick<SleeEvent, "email" | "attrs" | "hub_id" | "identify_qs">,
-  opts: { cohort?: string; quality?: string; status?: string } = {}
+  opts: { cohort?: string; quality?: string; status?: string; source?: string | null } = {}
 ): Promise<{ before: Contact | null; after: Contact }> {
   const before = await getByEmail(env, ev.email);
-  const attrs = { ...parseAttrs(before), ...clean(ev.attrs) };
+  const prev = parseAttrs(before);
+  const attrs: Record<string, unknown> = { ...prev, ...clean(ev.attrs) };
+  // Signup history: first source + every source this person ever signed up through.
+  if (opts.source) {
+    const all = Array.isArray(prev.sources) ? (prev.sources as string[]) : [];
+    attrs.sources = all.includes(opts.source) ? all : [...all, opts.source];
+    attrs.first_source = prev.first_source ?? opts.source;
+    if (!all.includes(opts.source)) {
+      const at = (prev.source_dates && typeof prev.source_dates === "object") ? prev.source_dates as Record<string, string> : {};
+      attrs.source_dates = { ...at, [opts.source]: new Date().toISOString() };
+    }
+  } else {
+    if (prev.sources) attrs.sources = prev.sources;
+    if (prev.first_source) attrs.first_source = prev.first_source;
+  }
   const sah_score = toNum(attrs.sah_score);
   const glotype = toStr(attrs.glotype_element);
   const power_move = toStr(attrs.power_move);

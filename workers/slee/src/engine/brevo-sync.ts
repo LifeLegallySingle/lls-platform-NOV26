@@ -108,9 +108,13 @@ export async function upsertBrevoContact(env: Env, c: Contact, source: string): 
   const ov = overrides(env)[source];
   if (ov) row = { list_id: Number(ov) };
   if (!row) {
-    // No list for this source yet: visible error, retried until a list is mapped.
+    // Option B: first signup from a new form source creates its own list ("SLEE · <source>").
+    const id = await ensureListFor(env, source);
+    if (id) row = { list_id: id };
+  }
+  if (!row) {
     await env.DB.prepare("UPDATE contacts SET brevo_error = ? WHERE id = ?")
-      .bind(`waiting: no Brevo list mapped for source '${source}'`, c.id).run();
+      .bind(`waiting: could not create Brevo list for source '${source}'`, c.id).run();
     return "retry";
   }
 
@@ -154,4 +158,33 @@ export async function markBrevoSkipped(env: Env, c: Contact, reason: string) {
   if (c.brevo_synced_at) return;
   await env.DB.prepare("UPDATE contacts SET brevo_error = ? WHERE id = ? AND brevo_synced_at IS NULL")
     .bind(`skipped: ${reason}`.slice(0, 300), c.id).run();
+}
+
+/** Find or create the Brevo list for one source (in folder "SLEE") and remember it in brevo_lists. */
+export async function ensureListFor(env: Env, source: string): Promise<number | null> {
+  if (!env.BREVO_API_KEY) return null;
+  const name = BREVO_SYNC.listName(source);
+  const folders = await api(env, "GET", "/contacts/folders?limit=50&offset=0");
+  if (!folders.ok) return null;
+  let folderId = (folders.data?.folders ?? []).find((f: any) => f.name === BREVO_SYNC.folderName)?.id;
+  if (!folderId) {
+    const f = await api(env, "POST", "/contacts/folders", { name: BREVO_SYNC.folderName });
+    if (!f.ok) return null;
+    folderId = f.data?.id;
+  }
+  let id: number | undefined;
+  for (let off = 0; off < 200 && !id; off += 50) {
+    const l = await api(env, "GET", `/contacts/lists?limit=50&offset=${off}`);
+    if (!l.ok) break;
+    id = (l.data?.lists ?? []).find((x: any) => x.name === name)?.id;
+    if ((l.data?.lists ?? []).length < 50) break;
+  }
+  if (!id) {
+    const c = await api(env, "POST", "/contacts/lists", { name, folderId });
+    if (!c.ok) return null;
+    id = c.data?.id;
+  }
+  if (!id) return null;
+  await env.DB.prepare("INSERT OR REPLACE INTO brevo_lists (source, list_id, name) VALUES (?,?,?)").bind(source, id, name).run();
+  return id;
 }

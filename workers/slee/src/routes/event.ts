@@ -33,7 +33,8 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
     .bind(ev.event_id, ev.type, ev.source, rawBody).run();
   if (!dup.meta.changes) return { ok: true, duplicate: true, event_id: ev.event_id };
 
-  const { before, after } = await upsertContact(env, ev);
+  const brevoSource = sourceForEvent(ev);
+  const { before, after } = await upsertContact(env, ev, { source: brevoSource });
   const signals = inferSignals(ev.type, before, after);
   const contact = await maybeReactivate(env, after, signals);
   const { enrolled, exited } = await applySignals(env, contact, signals);
@@ -42,7 +43,6 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
     .bind(contact.id, JSON.stringify(signals), ev.event_id).run();
 
   // SLEE → Brevo secondary copy (never blocks ingest; retries via outbox).
-  const brevoSource = sourceForEvent(ev);
   if (brevoSource) ctx.waitUntil(syncToBrevo(env, contact, brevoSource));
   else ctx.waitUntil(markBrevoSkipped(env, contact, `no opt-in source (event ${ev.type}${ev.product ? ", product " + ev.product : ""})`));
 
