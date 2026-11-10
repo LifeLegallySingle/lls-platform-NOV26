@@ -7,3 +7,6 @@ workers/slee/import/
 # never commit contact exports
 *.csv
 *Brevo_Segmented*.xlsx
+
+# allow non-PII docs CSVs
+!docs/*.csv

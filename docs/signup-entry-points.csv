@@ -1,0 +1,29 @@
+Area,Page_or_location,URL,WP_ID,Form_today,Brevo_form_name,SLEE_source,SLEE_Brevo_list_ID,SLEE_Brevo_list_name,Action,Status,Notes
+Homepage,Homepage BluePrint,https://legallysingle.com/,5467,HUB [lls_hub_optin source=blueprint],—,blueprint,92,SLEE · blueprint,Keep,Done,Old homepage Brevo form already replaced (Nov 9); only leftover Brevo CSS remains
+Homepage,Homepage Power Move widget,https://legallysingle.com/,5467,Power Move plugin → HUB (+ Brevo directly),HOME-FEB9th26[PowerMove]?,power_move_optin,95,SLEE · power_move_optin,Verify; remove plugin's direct Brevo call later,To verify,Same widget on /lifestyle/
+Dating,/dating/ form 1,https://legallysingle.com/dating/,163,Brevo app embed,Dating Coach Expert launch for /dating 12-19-25,dating_coach_waitlist,99,SLEE · dating_coach_waitlist,Replace with [lls_hub_optin],To replace,
+Dating,/dating/ form 2,https://legallysingle.com/dating/,163,Brevo app embed,Datebase sign up /dating,datebase_waitlist,100,SLEE · datebase_waitlist,Replace with [lls_hub_optin],To replace,
+Dating,/dating/solo-dating/,https://legallysingle.com/dating/solo-dating/,8113,Brevo app embed,(confirm in Brevo),solo_dating_waitlist,101,SLEE · solo_dating_waitlist,Replace with [lls_hub_optin],To replace,
+Solo travel,/solo-travel/ (Alissha waitlist),https://legallysingle.com/solo-travel/,8184,Brevo app embed,Alissha Nomad Love Lab waitlist Solo Travel Page,alissha_waitlist_solo_travel,102,SLEE · alissha_waitlist_solo_travel,Replace with [lls_hub_optin],To replace,
+Solo travel,/solo-travel/deals/,https://legallysingle.com/solo-travel/deals/,10962,Brevo app embed,Solo Travel Deal Alerts,solo_travel_deals,103,SLEE · solo_travel_deals,Replace with [lls_hub_optin],To replace,
+Memes,/single-memes/,https://legallysingle.com/single-memes/,1595,Brevo app embed,Valentines Memes,memes,104,SLEE · memes,Replace with [lls_hub_optin] — PILOT,Next (pilot),Same form as /valentines-day-memes/
+Memes,/valentines-day-memes/,https://legallysingle.com/valentines-day-memes/,10222,Brevo app embed,Valentines Memes,memes,104,SLEE · memes,Replace with [lls_hub_optin],To replace,
+Money,/unweddedwallet/,https://legallysingle.com/unweddedwallet/,11661,Brevo app embed,UnWedded Wallet,unweddedwallet,105,SLEE · unweddedwallet,Replace with [lls_hub_optin],To replace,
+Blog,Post: 10 reasons to stay single,https://legallysingle.com/single-life-trends/10-reasons-to-stay-single/,2936,Brevo app embed,Benefits being single post page (to confirm),post_10_reasons_stay_single,106,SLEE · post_10_reasons_stay_single,Replace with [lls_hub_optin],To replace,Only blog post with its own form
+Draft,Unnamed draft,—,13026,Brevo app embed,?,—,—,—,Check; delete or fix before publishing,To review,Not live
+Tools,Freedom Tax™ Calculator (2 forms),https://legallysingle.com/freedom-tax-calculator/,,WP ajax ftc_capture_email → HUB,—,freedom_tax,98,SLEE · freedom_tax,Verify reaches HUB with source,To verify,"Plugin calls HUB ingest (lines 419, 514)"
+Tools,Datēbase save-by-email,https://legallysingle.com/datebase/,,WP ajax datebase_save → HUB,—,datebase,(auto),SLEE · datebase,Verify; remove plugin's direct Brevo call later,To verify,
+Tools,GloType™ invite-gate unlock,https://legallysingle.com/glotype/,,Plugin → HUB (web request),GloType Invite Code?,glotype,97,SLEE · glotype,Verify,To verify,"Uses get_rest_url, not internal call"
+Tools,SAH quiz results,https://legallysingle.com/single-at-heart-by-bella-depaulo/,,SAH plugin → HUB; results email via magic link,—,sah_quiz,96,SLEE · sah_quiz,Fix magic-link part (HUB),Broken (fix),Quiz data reaches HUB/SLEE; account creation fails
+Community,/community/ category follows (3),https://legallysingle.com/community/,,HUB /v1/optin,—,(confirm current source),(auto),,Verify source names,To verify,
+Self-love,/self-love/ newsletter,https://legallysingle.com/self-love/,,HUB /v1/optin,—,self_love_glow,94,SLEE · self_love_glow_letters,Verify; drop list_id from shortcode,To verify,Shortcode example uses list_id=11 (direct Brevo)
+Lifestyle,/lifestyle/ Power Move widget,https://legallysingle.com/lifestyle/,,Power Move plugin,—,power_move_optin,95,SLEE · power_move_optin,Verify,To verify,
+Members,/soloachievers/ aiLIFE waitlist + onboarding,https://legallysingle.com/soloachievers/,,Unverified + magic link,—,ailife_waitlist,(auto),,Fix + verify,Broken (fix),
+Site-wide,Sign in / Sign up modal (109 pages),all pages,,HUB /magic-link,—,"(account, not opt-in)",—,—,Fix magic link (HUB),Broken (fix),Decision pending: welcome journey or silent
+Microsite,lifelegallysingle.com signup,https://lifelegallysingle.com/,,Brevo,LifeLegallySingle.com microsite,microsite,(auto),,Form → Worker → HUB /ingest,To replace,Needs repo access
+GlowMapper,glowmapper.app capture,https://glowmapper.app/,,Brevo SMS,—,glowmapper,(auto),,"Decide SMS vs email, then Worker → HUB",Decision needed,
+Retire,8 unused synced patterns,wp_block,"5682, 6064, 6152, 6160, 6229, 8492, 8493, 9156",Brevo app embeds,—,—,—,—,Retire (used nowhere),To retire,
+Retire,5 patterns with Brevo plugin shortcodes,wp_block,"1902, 4744, 4954, 4993, 4996",[sibwp_form],—,—,—,—,"Check usage, then retire",To check,
+Retire,Life Email Pop-Up plugin,plugin,,Brevo iframe (inactive),Life Pop Up list Jan26,—,—,—,Delete plugin,To retire,
+Retire,Brevo form CSS leftovers,global styles 3445 / custom CSS,3445,CSS only,—,—,—,—,Remove CSS at the end,To clean,
+Retired,"SEND QUIZ CTA, Community forms (Brevo)",not embedded,,—,SEND QUIZ CTA; Community - Childfree/Nomads; SoloAchievers in /Community,—,—,—,None (already retired),Done,Old contacts stay in old Brevo lists; tag in legacy import
