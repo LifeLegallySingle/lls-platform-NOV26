@@ -5,6 +5,7 @@ import { sendTemplate } from "./send";
 import { suppress } from "./suppress";
 import { flushBrevo, flushFeedback } from "./feedback";
 import { ensureBrevoLists } from "./brevo-sync";
+import { runOneJob } from "./jobs";
 import { BREVO_SYNC, DELIVERABILITY } from "../config";
 
 type DueRow = Contact & { enrollment_id: number; sequence: string; step: number; enrolled_at: string };
@@ -18,6 +19,9 @@ export async function sentToday(env: Env) {
 
 export async function runScheduler(env: Env) {
   const report = { processed: 0, sent: 0, skipped: 0, deferred: 0, completed: 0, sunset: 0, failed: 0, capped: false, feedback: { sent: 0, failed: 0 } };
+  // One-off admin jobs get their own tick (free-plan query budget).
+  const job = await runOneJob(env);
+  if (job) { (report as any).job = job; return report; }
   report.feedback = await flushFeedback(env, 3);
   const lists = await env.DB.prepare("SELECT COUNT(*) n FROM brevo_lists").first<{ n: number }>();
   // Free plan = 50 D1 queries / invocation: list provisioning (one-time) gets its own run.
