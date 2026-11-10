@@ -170,6 +170,16 @@ export const TEMPLATES: Record<string, Tpl> = {
       p(`Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
   }),
 
+  deals_1: (x) => ({
+    subject: "You’re on the Singles Only deal list",
+    preheader: "Deals picked for people who shop for one.",
+    body: h("You’re in.") +
+      p("You’ll be first to hear about exclusive Singles Only offers: deals picked for people who shop for one, travel solo and treat themselves on purpose.") +
+      p("Singles Day is the one shopping holiday made for us. Start with this year’s picks:") +
+      btn(x, "/singles-day-deals/", "See the Singles Day deals") +
+      p(`Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
+  }),
+
   /* ---------- Re-engagement (legacy, pre-HUB) ---------- */
   re_1: (x) => ({
     subject: "We built something for you",
