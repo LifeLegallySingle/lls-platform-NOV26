@@ -75,7 +75,7 @@ export async function runScheduler(env: Env) {
 
     // Global frequency cap across all journeys.
     const lastSent = sentThisRun.has(row.id) ? now : row.last_sent_at;
-    if (lastSent && addHours(lastSent, minGap) > now) {
+    if (!step.instant && lastSent && addHours(lastSent, minGap) > now) {
       await setEnroll("next_at=?", addHours(lastSent, minGap));
       report.deferred++;
       continue;

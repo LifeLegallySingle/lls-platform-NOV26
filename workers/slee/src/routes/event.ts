@@ -4,6 +4,8 @@ import { verifySigned } from "../lib/crypto";
 import { normalize } from "../lib/normalize";
 import { inferSignals, maybeReactivate, upsertContact } from "../engine/contacts";
 import { applySignals } from "../engine/enroll";
+import { sendInstant } from "../engine/instant";
+import { SEQ_BY_ID } from "../engine/sequences";
 import { markBrevoSkipped, sourceForEvent, syncToBrevo } from "../engine/brevo-sync";
 
 /** POST /v1/event — HUB -> SLEE. HMAC-signed, idempotent, accepts HUB's native payload. */
@@ -36,6 +38,7 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
   const brevoSource = sourceForEvent(ev);
   const { before, after } = await upsertContact(env, ev, { source: brevoSource });
   const signals = inferSignals(ev.type, before, after);
+  if (brevoSource) signals.push(`source:${brevoSource}`);
   const contact = await maybeReactivate(env, after, signals);
   const { enrolled, exited } = await applySignals(env, contact, signals);
 
@@ -43,6 +46,9 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
     .bind(contact.id, JSON.stringify(signals), ev.event_id).run();
 
   // SLEE → Brevo secondary copy (never blocks ingest; retries via outbox).
+  for (const seqId of enrolled) {
+    if (SEQ_BY_ID[seqId]?.steps[0]?.instant) ctx.waitUntil(sendInstant(env, contact.id, seqId));
+  }
   if (brevoSource) ctx.waitUntil(syncToBrevo(env, contact, brevoSource));
   else ctx.waitUntil(markBrevoSkipped(env, contact, `no opt-in source (event ${ev.type}${ev.product ? ", product " + ev.product : ""})`));
 

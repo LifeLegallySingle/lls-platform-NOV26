@@ -159,6 +159,17 @@ export const TEMPLATES: Record<string, Tpl> = {
       btn(x, LINKS.sahQuiz, "Take the quiz"),
   }),
 
+  /* ---------- Form confirmations (instant) ---------- */
+  memes_1: (x) => ({
+    subject: "Your Single Memes are here",
+    preheader: "We got you. Laugh first, then pass them on.",
+    body: h("We got you.") +
+      p("Here are the memes, as promised: funny, relatable, and made for people who love their single life.") +
+      btn(x, "/single-memes/", "See the Single Memes") +
+      p(`Need more? The ${a(x, "/valentines-day-memes/", "Valentine’s Day memes")} are for the day everyone else is booked.`) +
+      p(`Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
+  }),
+
   /* ---------- Re-engagement (legacy, pre-HUB) ---------- */
   re_1: (x) => ({
     subject: "We built something for you",
