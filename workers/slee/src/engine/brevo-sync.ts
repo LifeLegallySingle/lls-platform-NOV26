@@ -20,8 +20,10 @@ const PRODUCT_SOURCE: Record<string, string> = {
 
 /** Entry source for an event, or null when it shouldn't reach Brevo (e.g. account sign-ins with no opt-in). */
 export function sourceForEvent(ev: Pick<SleeEvent, "product" | "attrs" | "type">): string | null {
-  const optin = typeof ev.attrs.optin_source === "string" ? ev.attrs.optin_source.toLowerCase() : "";
-  if (optin && BREVO_SYNC.sources.includes(optin)) return optin;
+  // Any form source is accepted (e.g. dating_waitlist, memes); list comes from brevo_lists / BREVO_LIST_MAP.
+  const raw = typeof ev.attrs.optin_source === "string" ? ev.attrs.optin_source : "";
+  const optin = raw.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40);
+  if (optin) return optin;
   const p = (ev.product || "").toLowerCase();
   if (PRODUCT_SOURCE[p]) return PRODUCT_SOURCE[p];
   if (p === "hub_optin" || p === "lls_hub_optin" || ev.type === "optin.subscribed") return "site_optin";
@@ -50,7 +52,7 @@ export async function ensureBrevoLists(env: Env) {
   const have = await env.DB.prepare("SELECT source FROM brevo_lists").all<{ source: string }>();
   const known = new Set(have.results.map((r) => r.source));
   const ov = overrides(env);
-  const missing = BREVO_SYNC.sources.filter((s) => !known.has(s));
+  const missing = BREVO_SYNC.knownSources.filter((s) => !known.has(s));
   if (!missing.length) return { ok: true, created: 0 };
 
   // Explicit overrides first (no API calls).
@@ -98,9 +100,19 @@ export async function ensureBrevoLists(env: Env) {
 /** Upsert one contact into Brevo. Returns 'ok' | 'retry' | 'fail' (4xx: don't retry). */
 export async function upsertBrevoContact(env: Env, c: Contact, source: string): Promise<"ok" | "retry" | "fail"> {
   if (!env.BREVO_API_KEY) return "retry";
-  if (c.status !== "active") return "ok"; // never (re)add suppressed people to lists
-  const row = await env.DB.prepare("SELECT list_id FROM brevo_lists WHERE source = ?").bind(source).first<{ list_id: number }>();
-  if (!row) return "retry"; // lists not provisioned yet → cron retries
+  if (c.status !== "active") {
+    await env.DB.prepare("UPDATE contacts SET brevo_error = ? WHERE id = ?").bind(`skipped: contact is ${c.status}`, c.id).run();
+    return "ok"; // never (re)add suppressed people to lists
+  }
+  let row = await env.DB.prepare("SELECT list_id FROM brevo_lists WHERE source = ?").bind(source).first<{ list_id: number }>();
+  const ov = overrides(env)[source];
+  if (ov) row = { list_id: Number(ov) };
+  if (!row) {
+    // No list for this source yet: visible error, retried until a list is mapped.
+    await env.DB.prepare("UPDATE contacts SET brevo_error = ? WHERE id = ?")
+      .bind(`waiting: no Brevo list mapped for source '${source}'`, c.id).run();
+    return "retry";
+  }
 
   const a = parseAttrs(c);
   const attributes: Record<string, unknown> = { SOURCE: source };
@@ -135,4 +147,11 @@ export async function syncToBrevo(env: Env, c: Contact, source: string | null) {
 export async function queueBrevo(env: Env, contactId: number, source: string) {
   await env.DB.prepare("INSERT INTO feedback_outbox (target, payload) VALUES ('brevo', ?)")
     .bind(JSON.stringify({ contact_id: contactId, source })).run();
+}
+
+/** No opt-in source (e.g. Google sign-in, identity restore): record why, so nothing is silent. */
+export async function markBrevoSkipped(env: Env, c: Contact, reason: string) {
+  if (c.brevo_synced_at) return;
+  await env.DB.prepare("UPDATE contacts SET brevo_error = ? WHERE id = ? AND brevo_synced_at IS NULL")
+    .bind(`skipped: ${reason}`.slice(0, 300), c.id).run();
 }

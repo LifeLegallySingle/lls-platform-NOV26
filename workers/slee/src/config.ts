@@ -34,7 +34,8 @@ export const DELIVERABILITY = {
 export const BREVO_SYNC = {
   folderName: "SLEE",
   listName: (source: string) => `SLEE · ${source}`,
-  sources: ["blueprint", "site_optin", "self_love_glow_letters", "power_move_optin", "sah_quiz", "glotype", "freedom_tax"],
+  /** Sources SLEE auto-provisions lists for. ANY form source is accepted; others need a list in BREVO_LIST_MAP. */
+  knownSources: ["blueprint", "site_optin", "self_love_glow", "power_move_optin", "sah_quiz", "glotype", "freedom_tax"],
 };
 
 export const BRAND = {

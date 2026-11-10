@@ -4,7 +4,7 @@ import { verifySigned } from "../lib/crypto";
 import { normalize } from "../lib/normalize";
 import { inferSignals, maybeReactivate, upsertContact } from "../engine/contacts";
 import { applySignals } from "../engine/enroll";
-import { sourceForEvent, syncToBrevo } from "../engine/brevo-sync";
+import { markBrevoSkipped, sourceForEvent, syncToBrevo } from "../engine/brevo-sync";
 
 /** POST /v1/event — HUB -> SLEE. HMAC-signed, idempotent, accepts HUB's native payload. */
 export async function handleEvent(req: Request, env: Env, ctx: ExecutionContext) {
@@ -44,6 +44,7 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
   // SLEE → Brevo secondary copy (never blocks ingest; retries via outbox).
   const brevoSource = sourceForEvent(ev);
   if (brevoSource) ctx.waitUntil(syncToBrevo(env, contact, brevoSource));
+  else ctx.waitUntil(markBrevoSkipped(env, contact, `no opt-in source (event ${ev.type}${ev.product ? ", product " + ev.product : ""})`));
 
   return { ok: true, event_id: ev.event_id, contact_id: contact.id, status: contact.status, signals, enrolled, exited, brevo_source: brevoSource };
 }

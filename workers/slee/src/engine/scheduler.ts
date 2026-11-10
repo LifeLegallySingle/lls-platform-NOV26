@@ -5,7 +5,7 @@ import { sendTemplate } from "./send";
 import { suppress } from "./suppress";
 import { flushBrevo, flushFeedback } from "./feedback";
 import { ensureBrevoLists } from "./brevo-sync";
-import { DELIVERABILITY } from "../config";
+import { BREVO_SYNC, DELIVERABILITY } from "../config";
 
 type DueRow = Contact & { enrollment_id: number; sequence: string; step: number; enrolled_at: string };
 
@@ -21,7 +21,7 @@ export async function runScheduler(env: Env) {
   report.feedback = await flushFeedback(env, 3);
   const lists = await env.DB.prepare("SELECT COUNT(*) n FROM brevo_lists").first<{ n: number }>();
   // Free plan = 50 D1 queries / invocation: list provisioning (one-time) gets its own run.
-  if ((lists?.n ?? 0) < 7) { (report as any).brevo_lists = await ensureBrevoLists(env); return report; }
+  if ((lists?.n ?? 0) < BREVO_SYNC.knownSources.length) { (report as any).brevo_lists = await ensureBrevoLists(env); return report; }
   (report as any).brevo = await flushBrevo(env, 2);
 
   // Hourly housekeeping: event retention + old counters (2 queries).

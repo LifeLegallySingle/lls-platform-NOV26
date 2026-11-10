@@ -20,6 +20,7 @@ export interface Env {
   MIN_HOURS_BETWEEN_EMAILS: string;
   DRY_RUN: string;
   BREVO_LIST_MAP?: string;   // optional JSON override {source: listId}
+  LIVE_TEMPLATES?: string;   // comma list of template ids that send for real even while DRY_RUN is on
   BREVO_API_BASE?: string;   // tests only
 }
 

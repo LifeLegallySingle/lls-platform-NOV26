@@ -31,7 +31,8 @@ export async function sendTemplate(
   const msg = await render(env, c, templateId, sendId);
   let status = "dry_run", providerId: string | null = null, error: string | null = null;
 
-  if (!isDry(env)) {
+  const liveOverride = (env.LIVE_TEMPLATES || "").split(",").map((s) => s.trim()).filter(Boolean).includes(templateId);
+  if (!isDry(env) || liveOverride) {
     const r = await brevoSend(env, {
       to: c.email, toName: c.firstname ?? undefined, subject: msg.subject, html: msg.html, text: msg.text,
       unsubUrl: msg.unsub, sendId, tags: [meta.sequence ?? "manual", templateId],
