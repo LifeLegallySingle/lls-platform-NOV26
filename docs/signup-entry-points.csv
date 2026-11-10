@@ -1,5 +1,6 @@
 Area,Page_or_location,URL,WP_ID,Form_today,Brevo_form_name,SLEE_source,SLEE_Brevo_list_ID,SLEE_Brevo_list_name,Action,Status,Notes
 Homepage,Homepage BluePrint,https://legallysingle.com/,5467,HUB [lls_hub_optin source=blueprint],—,blueprint,92,SLEE · blueprint,Keep,Done,Old homepage Brevo form already replaced (Nov 9); only leftover Brevo CSS remains
+Deals,/singles-day-deals/ deal alerts,https://legallysingle.com/singles-day-deals/,13263,HUB [lls_hub_optin source=singles_day_deals],—,singles_day_deals,(auto on first signup),SLEE · singles_day_deals,New form Nov 10 (replaced long disclosure; short Amazon disclosure kept),Live — confirmation email awaiting approval,
 Homepage,Homepage Power Move widget,https://legallysingle.com/,5467,Power Move plugin → HUB (+ Brevo directly),HOME-FEB9th26[PowerMove]?,power_move_optin,95,SLEE · power_move_optin,Verify; remove plugin's direct Brevo call later,To verify,Same widget on /lifestyle/
 Dating,/dating/ form 1,https://legallysingle.com/dating/,163,Brevo app embed,Dating Coach Expert launch for /dating 12-19-25,dating_coach_waitlist,99,SLEE · dating_coach_waitlist,Replace with [lls_hub_optin],To replace,
 Dating,/dating/ form 2,https://legallysingle.com/dating/,163,Brevo app embed,Datebase sign up /dating,datebase_waitlist,100,SLEE · datebase_waitlist,Replace with [lls_hub_optin],To replace,
