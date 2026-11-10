@@ -82,6 +82,12 @@ export const SEQUENCES: Sequence[] = [
     steps: [{ delayHours: 0, template: "deals_1", instant: true }],
   },
   {
+    id: "solo_travel_deals_confirm",
+    description: "Solo travel deal alerts signup (/solo-travel/deals/) — instant confirmation",
+    triggers: ["source:solo_travel_deals"],
+    steps: [{ delayHours: 0, template: "travel_deals_1", instant: true }],
+  },
+  {
     id: "reengage",
     description: "Legacy (pre-HUB) contacts — 3-touch win-back, then sunset non-clickers",
     triggers: ["reengage.start"],     // enrolled by /v1/admin/import or /v1/admin/enroll
@@ -96,7 +102,7 @@ export const SEQUENCES: Sequence[] = [
 ];
 
 /** Form sources that have their own instant confirmation journey (they skip the generic welcome). */
-export const CONFIRM_SOURCES = new Set(["memes", "singles_day_deals"]);
+export const CONFIRM_SOURCES = new Set(["memes", "singles_day_deals", "solo_travel_deals"]);
 function hasOwnConfirmation(c: Contact): boolean {
   try { const a = JSON.parse(c.attrs || "{}"); return CONFIRM_SOURCES.has(String(a.optin_source ?? "")); } catch { return false; }
 }

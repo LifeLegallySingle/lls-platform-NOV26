@@ -185,6 +185,18 @@ export const TEMPLATES: Record<string, Tpl> = {
       p(`P.S. Curious how deeply single life suits you? Take the 2-minute ${a(x, LINKS.sahQuiz, "Single at Heart quiz")}.`),
   }),
 
+  travel_deals_1: (x) => ({
+    subject: "You’re in: solo travel deals, no plus-one required",
+    preheader: "Window seat, your playlist, your rules.",
+    body: h("You’re in. Pack light.") +
+      quote(x) +
+      p("Welcome to Solo Travel Deal Alerts: trips, stays and flights picked for people who travel on their own terms. No “per person, double occupancy” fine print. No waiting for someone else’s vacation days.") +
+      p("Start with this season’s solo-friendly picks:") +
+      btn(x, "/solo-travel/deals/", "See the Solo Travel Deals") +
+      p(`<strong>Shopping for one this 11.11?</strong> The ${a(x, "/singles-day-deals/", "Singles Day deals")} are live now.`) +
+      p(`P.S. Not sure where to go first? Explore ${a(x, LINKS.soloTravel, "solo travel ideas")} made for people who love their own company.`),
+  }),
+
   /* ---------- Re-engagement (legacy, pre-HUB) ---------- */
   re_1: (x) => ({
     subject: "We built something for you",
