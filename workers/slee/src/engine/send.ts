@@ -1,6 +1,7 @@
 import type { Contact, Env } from "../env";
 import { isDry, nowIso } from "../env";
 import { brevoSend } from "../lib/brevo";
+import { b64urlDecode } from "../lib/crypto";
 import { TEMPLATES, type TCtx } from "../templates";
 import { htmlToText, layout } from "../templates/layout";
 import { absolute, clickUrl, unsubUrl } from "./links";
@@ -38,6 +39,9 @@ export async function sendTemplate(
       unsubUrl: msg.unsub, sendId, tags: [meta.sequence ?? "manual", templateId],
     });
     status = r.ok ? "sent" : "failed";
+    if (r.ok && env.MONITOR_EMAIL && env.MONITOR_EMAIL.toLowerCase() !== c.email.toLowerCase()) {
+      await sendMonitorCopy(env, c.email, templateId, msg).catch(() => {});
+    }
     providerId = r.id ?? null;
     error = r.error ?? null;
   }
@@ -51,4 +55,18 @@ export async function sendTemplate(
   if (status !== "failed") stmts.push(env.DB.prepare("UPDATE contacts SET last_sent_at = ? WHERE id = ?").bind(now, c.id));
   await env.DB.batch(stmts);
   return { ok: status !== "failed", sendId, status, error: error ?? undefined };
+}
+
+/** Safe copy for the monitor inbox: tracked links → plain destinations, unsubscribe disabled, not logged as a send. */
+async function sendMonitorCopy(env: Env, recipient: string, templateId: string, msg: { subject: string; html: string; text: string; unsub: string }) {
+  const base = env.PUBLIC_BASE_URL.replace(/\/$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const plain = (s: string) => s
+    .replace(new RegExp(base + "/c/[^/]+/([A-Za-z0-9_-]+)/[a-f0-9]+", "g"), (_m, b64) => { try { return b64urlDecode(b64); } catch { return "#"; } })
+    .split(msg.unsub).join("#monitor-copy-unsubscribe-disabled");
+  const banner = `<div style="background:#141414;color:#fff;font:13px/1.4 Arial,sans-serif;padding:10px 14px;">SLEE monitor copy · sent to <b>${recipient}</b> · email <b>${templateId}</b> · links are plain, unsubscribe disabled</div>`;
+  const html = plain(msg.html).replace(/<body([^>]*)>/i, `<body$1>${banner}`);
+  await brevoSend(env, {
+    to: env.MONITOR_EMAIL!, subject: `[SLEE → ${recipient} · ${templateId}] ${msg.subject}`, html, text: plain(msg.text),
+    unsubUrl: `${env.PUBLIC_BASE_URL}/monitor-copy`, sendId: "monitor", tags: ["slee-monitor", templateId],
+  });
 }

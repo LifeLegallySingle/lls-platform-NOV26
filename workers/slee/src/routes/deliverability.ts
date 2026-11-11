@@ -9,10 +9,10 @@ export async function handleDeliverability(env: Env, url: URL) {
   const days = Math.min(Math.max(Number(url.searchParams.get("days") || 7), 1), 180);
   const source = url.searchParams.get("source") || "all";
   const since = new Date(Date.now() - days * 864e5).toISOString();
-  const srcSql =
+  const srcSql = "AND (tag IS NULL OR tag NOT LIKE '%slee-monitor%') " + (
     source === "slee" ? "AND channel = 'transactional' AND tag LIKE '%slee%'" :
     source === "plugins" ? "AND channel = 'transactional' AND (tag IS NULL OR tag NOT LIKE '%slee%')" :
-    source === "campaigns" ? "AND channel = 'marketing'" : "";
+    source === "campaigns" ? "AND channel = 'marketing'" : "");
 
   const cols = `
     SUM(type='sent') sent, SUM(type='delivered') delivered, SUM(type='deferred') deferred,
