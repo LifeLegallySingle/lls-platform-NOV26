@@ -268,7 +268,7 @@ async function brevoCampaign(env: Env, name: string, p: { template: string; list
   const pre = (html.match(/<div style="display:none[^>]*>([\s\S]*?)&#8199;/) || [])[1] || "";
   const c = await brevo(env, "POST", "/emailCampaigns", {
     name, subject: msg.subject, previewText: pre.replace(/&amp;/g, "&"), sender: { name: env.SENDER_NAME, email: env.SENDER_EMAIL },
-    replyTo: env.REPLY_TO || env.SENDER_EMAIL, htmlContent: html, tag: "slee",
+    replyTo: env.REPLY_TO || env.SENDER_EMAIL, htmlContent: html, // no "tag": not available on this Brevo plan
     recipients: { listIds: p.list_ids, exclusionListIds: p.exclusion_list_ids ?? [] },
   });
   if (!c.ok) throw new Error(`create ${c.status}: ${JSON.stringify(c.data).slice(0, 250)}`);
