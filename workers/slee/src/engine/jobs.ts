@@ -3,7 +3,8 @@ import { nowIso } from "../env";
 import { brevoApi } from "../lib/brevo";
 import { MARKETING_MIN_GAP_HOURS } from "../config";
 import type { Contact } from "../env";
-import { sendPreview, sendTemplate } from "./send";
+import { render, sendPreview, sendTemplate } from "./send";
+import { b64urlDecode } from "../lib/crypto";
 import { TEMPLATES } from "../templates";
 
 /**
@@ -79,6 +80,8 @@ export async function runOneJob(env: Env): Promise<{ job: string; status: string
         return { job: job.job, status: "pending", result: r };
       }
       result = r;
+    } else if (job.job.startsWith("brevo_campaign:")) {
+      result = await brevoCampaign(env, job.job.split(":").slice(1).join(":"), JSON.parse(job.params || "{}"));
     } else { status = "error"; result = "unknown job"; }
   } catch (e) { status = "error"; result = String(e).slice(0, 300); }
   await env.DB.prepare("UPDATE slee_jobs SET status = ?, result = ?, done_at = ? WHERE job = ?").bind(status, result, nowIso(), job.job).run();
@@ -240,4 +243,38 @@ export function recentlyMailedSql(): string {
   return `SELECT c2.email FROM sends s JOIN contacts c2 ON c2.id = s.contact_id
             WHERE s.status = 'sent' AND s.sequence LIKE 'broadcast:%' AND s.sent_at >= '${cutoff}'
           UNION SELECT email FROM email_events WHERE channel = 'marketing' AND type IN ('sent','delivered') AND created_at >= '${cutoff}'`;
+}
+
+/* ---------------- SLEE → Brevo Marketing Campaign (right channel for promos) ----------------
+ * params: { template, list_ids:[..], exclusion_list_ids:[..], utm_campaign, send_now: true }
+ * Renders the SLEE template, converts links to plain URLs (+UTM, Amazon untouched), uses Brevo's {{ unsubscribe }},
+ * creates the campaign and (if send_now) sends it. Brevo tracks opens/clicks; Marketing webhook brings results back.
+ */
+async function brevoCampaign(env: Env, name: string, p: { template: string; list_ids: number[]; exclusion_list_ids?: number[]; utm_campaign?: string; send_now?: boolean }): Promise<string> {
+  if (!TEMPLATES[p.template]) throw new Error(`unknown template ${p.template}`);
+  const fake = { id: 6, email: "campaign@slee", hub_id: null, firstname: null, attrs: "{}", sah_score: null, sah_tier: null, glotype: null, power_move: null,
+    cia_tier: "COLD", cohort: null, quality: "ok", identify_qs: null, status: "active", clicks: 0, last_click_at: null, last_sent_at: null,
+    soft_bounces: 0, last_soft_bounce_at: null, deliverability: "ok", brevo_synced_at: null, brevo_error: null, country: null, country_source: null, country_at: null,
+    created_at: "", updated_at: "" } as unknown as Contact;
+  const msg = await render(env, fake, p.template, "campaign");
+  const base = env.PUBLIC_BASE_URL.replace(/\/$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const utm = (u: string) => {
+    if (/amazon\./i.test(u) || !p.utm_campaign) return u;
+    const url = new URL(u); url.searchParams.set("utm_source", "brevo"); url.searchParams.set("utm_medium", "email"); url.searchParams.set("utm_campaign", p.utm_campaign);
+    return url.toString();
+  };
+  let html = msg.html.replace(new RegExp(base + "/c/[^/]+/([A-Za-z0-9_-]+)/[a-f0-9]+", "g"), (_m, b64) => { try { return utm(b64urlDecode(b64)); } catch { return "#"; } });
+  html = html.split(msg.unsub).join("{{ unsubscribe }}");
+  const pre = (html.match(/<div style="display:none[^>]*>([\s\S]*?)&#8199;/) || [])[1] || "";
+  const c = await brevo(env, "POST", "/emailCampaigns", {
+    name, subject: msg.subject, previewText: pre.replace(/&amp;/g, "&"), sender: { name: env.SENDER_NAME, email: env.SENDER_EMAIL },
+    replyTo: env.REPLY_TO || env.SENDER_EMAIL, htmlContent: html, tag: "slee",
+    recipients: { listIds: p.list_ids, exclusionListIds: p.exclusion_list_ids ?? [] },
+  });
+  if (!c.ok) throw new Error(`create ${c.status}: ${JSON.stringify(c.data).slice(0, 250)}`);
+  const id = c.data?.id;
+  if (!p.send_now) return `campaign ${id} created as draft in Brevo (not sent)`;
+  const sNow = await brevo(env, "POST", `/emailCampaigns/${id}/sendNow`);
+  if (!sNow.ok) throw new Error(`campaign ${id} created but sendNow failed ${sNow.status}: ${JSON.stringify(sNow.data).slice(0, 250)}`);
+  return `campaign ${id} "${name}" sent to lists ${p.list_ids.join(",")} (excluding ${(p.exclusion_list_ids ?? []).join(",") || "none"})`;
 }
