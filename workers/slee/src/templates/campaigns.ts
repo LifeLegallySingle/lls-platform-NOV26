@@ -69,10 +69,9 @@ export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
       label("Our Self-Care Pick") +
       dealCardImg(x, "Glow · Self-gift pick", "Red light therapy, at home", "An infrared therapy wrap for shoulders and back. A little daily ritual, just for you.",
         "https://m.media-amazon.com/images/I/71eo6Z3b8iL._AC_SL1500_.jpg", "Puroth red light therapy wrap for shoulders", AMAZON_RED_LIGHT, "Shop on Amazon") +
-      `<p style="margin:0 0 24px;font:12px/1.5 Helvetica,Arial,sans-serif;color:#8A8A8A;">As an Amazon Associate, we earn from qualifying purchases.</p>` +
       blackBtn(x.url("/singles-day-deals/"), "Get them all") +
       para(`<strong>Thinking about solo travel?</strong> Check out the deals: <a href="${x.url("/solo-travel/deals/")}" style="color:${PURPLE};">Solo Travel Deals</a>`) +
-      `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">Offers checked on each brand’s website. Brands can change or end offers at any time, so confirm the final price at checkout. Some links on our website are affiliate links, which means we may earn a commission at no extra cost to you.</p>` +
+      `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">As an Amazon Associate, we earn from qualifying purchases.</p>` +
       quoteLine(quoteFor(x.c.id)),
   }),
 
