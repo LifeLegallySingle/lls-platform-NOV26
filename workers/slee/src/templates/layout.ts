@@ -45,8 +45,11 @@ export function campaignLayout(o: { preheader: string; body: string; unsubUrl: s
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(o.preheader)}&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
-<tr><td style="background:#000000;padding:14px 28px;text-align:center;">
-<a href="https://legallysingle.com/" style="text-decoration:none;"><img src="${BRAND.logoUrl}" width="104" height="104" alt="Life Legally Single" style="display:block;margin:0 auto;border:0;width:104px;height:104px;"></a></td></tr>
+<tr><td style="background:#000000;padding:12px 20px;">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="vertical-align:middle;width:72px;"><a href="https://legallysingle.com/" style="text-decoration:none;"><img src="${BRAND.logoUrl}" width="72" height="72" alt="Life Legally Single" style="display:block;border:0;width:72px;height:72px;"></a></td>
+<td style="vertical-align:middle;padding-left:14px;font:800 20px/1.25 Helvetica,Arial,sans-serif;letter-spacing:-.01em;color:#FFFFFF;">Being Single is a Power Move™</td>
+</tr></table></td></tr>
 <tr><td style="padding:44px 28px 8px;font:16px/1.65 Helvetica,Arial,sans-serif;color:#0A0A0A;">
 ${o.body}
 </td></tr>
