@@ -55,7 +55,7 @@ ${o.body}
 </td></tr>
 <tr><td style="padding:28px 28px 40px;border-top:1px solid #EAEAEA;text-align:center;font:11px/1.7 Helvetica,Arial,sans-serif;letter-spacing:.06em;color:#8A8A8A;">
 <span style="text-transform:uppercase;letter-spacing:.22em;color:#0A0A0A;">Being single is a Power Move™</span><br><br>
-You’re getting this because you used a Life Legally Single™ tool.<br>${esc(o.address)}<br>
+Thanks for being part of the Life Legally Single™ community.<br>${esc(o.address)}<br>
 <a href="${o.unsubUrl}" style="color:#8A8A8A;">Unsubscribe</a>
 </td></tr></table>
 </td></tr></table></body></html>`;
