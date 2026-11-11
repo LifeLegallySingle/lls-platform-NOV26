@@ -57,8 +57,108 @@ export async function runOneJob(env: Env): Promise<{ job: string; status: string
         if (again.ok) await cacheTemplates(env, [again.data]);
         result = `updated template ${id}: ${changes} replacements`;
       }
+    } else if (job.job === "sync_brevo_contacts") {
+      result = await syncBrevoContacts(env, JSON.parse(job.params || "{}"));
+      if (result.startsWith("more:")) {
+        // re-queue the next page for the next tick
+        const offset = Number(result.split(":")[1]);
+        await env.DB.prepare("UPDATE slee_jobs SET status='pending', params=?, result=? WHERE job=?")
+          .bind(JSON.stringify({ offset }), `in progress: offset ${offset}`, job.job).run();
+        return { job: job.job, status: "pending", result };
+      }
+    } else if (job.job.startsWith("brevo_list_build:")) {
+      result = await buildBrevoList(env, job.job.split(":")[1], JSON.parse(job.params || "{}"));
     } else { status = "error"; result = "unknown job"; }
   } catch (e) { status = "error"; result = String(e).slice(0, 300); }
   await env.DB.prepare("UPDATE slee_jobs SET status = ?, result = ?, done_at = ? WHERE job = ?").bind(status, result, nowIso(), job.job).run();
   return { job: job.job, status, result };
+}
+
+/* ---------------- Brevo → SLEE contact import (paged, 500 per tick) ---------------- */
+const COHORT_BY_LIST: Record<number, string> = { 2: "wave1", 27: "wave1", 13: "wave2", 7: "wave2", 19: "wave3", 15: "wave3", 75: "wave3", 4: "wave4" };
+const gib = (v: unknown) => typeof v === "string" && /^[A-Za-z]{6,}$/.test(v) && (v.slice(1).match(/[A-Z]/g) || []).length >= 2;
+
+async function syncBrevoContacts(env: Env, p: { offset?: number }): Promise<string> {
+  const offset = p.offset ?? 0, limit = 500;
+  const r = await brevo(env, "GET", `/contacts?limit=${limit}&offset=${offset}&sort=asc`);
+  if (!r.ok) throw new Error(`brevo ${r.status}: ${JSON.stringify(r.data).slice(0, 200)}`);
+  const list: any[] = r.data?.contacts ?? [];
+  const rows = list.filter((c) => c.email && String(c.email).includes("@")).map((c) => {
+    const a = c.attributes || {};
+    const bot = gib(a.FIRSTNAME) || gib(a.CITY) || gib(a.SINGLE_REASON);
+    const lists: number[] = c.listIds || [];
+    const product = a.SAH_SCORE != null || a.GLOTYPE_ELEMENT || a.POWER_MOVE || a.STR_FREEDOM_TAX || a.PAGE_SOURCE;
+    let cohort = "brevo-other";
+    if (product) cohort = "brevo-product";
+    else for (const id of [2, 27, 13, 7, 19, 15, 75, 4]) if (lists.includes(id)) { cohort = COHORT_BY_LIST[id]; break; }
+    const quality = bot ? "bot" : "ok";
+    const status = c.emailBlacklisted ? "suppressed" : bot ? "suppressed" : "active";
+    const attrs: Record<string, unknown> = {
+      brevo_id: c.id, brevo_created: c.createdAt, brevo_lists: lists, brevo_blacklisted: !!c.emailBlacklisted, imported_from: "brevo-api",
+    };
+    for (const [k, v] of [["sah_score", a.SAH_SCORE], ["sah_status", a.SAH_STATUS], ["glotype_element", a.GLOTYPE_ELEMENT], ["power_move", a.POWER_MOVE],
+      ["str_freedom_tax", a.STR_FREEDOM_TAX], ["page_source", a.PAGE_SOURCE], ["firstname", bot ? null : a.FIRSTNAME]] as [string, unknown][]) {
+      if (v !== null && v !== undefined && v !== "") attrs[k] = v;
+    }
+    return { email: String(c.email).toLowerCase(), firstname: bot ? null : (a.FIRSTNAME || null), attrs: JSON.stringify(attrs), cohort, quality, status,
+      created: c.createdAt || nowIso(), blacklisted: c.emailBlacklisted ? 1 : 0 };
+  });
+  if (rows.length) {
+    const J = JSON.stringify(rows), v = (k: string) => `json_extract(j.value,'$.${k}')`, now = nowIso();
+    await env.DB.batch([
+      // new people: insert; existing SLEE contacts: keep their data, just record Brevo list membership + blocklist flag
+      env.DB.prepare(
+        `INSERT INTO contacts (email, firstname, attrs, cohort, quality, status, created_at, updated_at)
+         SELECT ${v("email")}, ${v("firstname")}, ${v("attrs")}, ${v("cohort")}, ${v("quality")}, ${v("status")}, ${v("created")}, ?2 FROM json_each(?1) j WHERE true
+         ON CONFLICT(email) DO UPDATE SET attrs = json_set(contacts.attrs, '$.brevo_lists', json(json_extract(excluded.attrs,'$.brevo_lists')),
+           '$.brevo_blacklisted', json(CASE WHEN json_extract(excluded.attrs,'$.brevo_blacklisted') THEN 'true' ELSE 'false' END)),
+           status = CASE WHEN json_extract(excluded.attrs,'$.brevo_blacklisted') AND contacts.status = 'active' THEN 'suppressed' ELSE contacts.status END,
+           updated_at = ?2`
+      ).bind(J, now),
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO suppressions (email, reason, source, created_at)
+         SELECT ${v("email")}, CASE WHEN ${v("blacklisted")} = 1 THEN 'brevo_blocklisted' ELSE 'bot' END, 'brevo-import', ?2
+         FROM json_each(?1) j WHERE ${v("status")} = 'suppressed'`
+      ).bind(J, now),
+    ]);
+  }
+  const total = Number(r.data?.count ?? 0), next = offset + list.length;
+  return list.length === limit && next < total ? `more:${next}` : `done: ${next} of ${total} contacts`;
+}
+
+/* ---------------- SLEE segment → Brevo list ---------------- */
+const SEGMENTS: Record<string, string> = {
+  // Safest send group: real, active, not blocklisted, and signed up in 2026 or used a product (quiz, Power Move…) or a SLEE form.
+  tier_a: `SELECT email FROM contacts WHERE status='active' AND quality='ok'
+             AND (COALESCE(json_extract(attrs,'$.brevo_created'), created_at) >= '2026-01-01'
+                  OR cohort = 'brevo-product' OR json_extract(attrs,'$.sources') IS NOT NULL OR sah_score IS NOT NULL)
+             AND email NOT LIKE 'test%' AND email NOT LIKE '%+%test%' AND email NOT LIKE 'muse%@lifelegallysingle.com'`,
+  // Never send: bots, suspect addresses, Brevo-blocklisted, bounced, complained, unsubscribed.
+  do_not_send: `SELECT email FROM contacts WHERE status <> 'active' OR quality <> 'ok' UNION SELECT email FROM suppressions`,
+};
+
+async function buildBrevoList(env: Env, segment: string, p: { name?: string; offset?: number }): Promise<string> {
+  const sql = SEGMENTS[segment];
+  if (!sql) throw new Error(`unknown segment ${segment}`);
+  const name = p.name || `SLEE · ${segment}`;
+  // find or create list in folder SLEE
+  const folders = await brevo(env, "GET", "/contacts/folders?limit=50&offset=0");
+  let folderId = (folders.data?.folders ?? []).find((f: any) => f.name === "SLEE")?.id;
+  if (!folderId) { const f = await brevo(env, "POST", "/contacts/folders", { name: "SLEE" }); folderId = f.data?.id; }
+  let listId: number | undefined;
+  for (let off = 0; off < 300 && !listId; off += 50) {
+    const l = await brevo(env, "GET", `/contacts/lists?limit=50&offset=${off}`);
+    listId = (l.data?.lists ?? []).find((x: any) => x.name === name)?.id;
+    if ((l.data?.lists ?? []).length < 50) break;
+  }
+  if (!listId) { const c = await brevo(env, "POST", "/contacts/lists", { name, folderId }); listId = c.data?.id; }
+  if (!listId) throw new Error("could not create list");
+  const { results } = await env.DB.prepare(sql).all<{ email: string }>();
+  const emails = results.map((r) => r.email);
+  let added = 0;
+  for (let i = 0; i < emails.length; i += 150) {
+    const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/add`, { emails: emails.slice(i, i + 150) });
+    if (r.ok) added += (r.data?.contacts?.success ?? []).length;
+  }
+  return `list ${listId} "${name}": ${emails.length} selected, ${added} added`;
 }
