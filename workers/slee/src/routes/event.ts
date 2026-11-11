@@ -4,6 +4,7 @@ import { verifySigned } from "../lib/crypto";
 import { normalize } from "../lib/normalize";
 import { inferSignals, maybeReactivate, upsertContact } from "../engine/contacts";
 import { applySignals } from "../engine/enroll";
+import { cleanCountry, setCountry } from "../engine/country";
 import { sendInstant } from "../engine/instant";
 import { SEQ_BY_ID } from "../engine/sequences";
 import { markBrevoSkipped, sourceForEvent, syncToBrevo } from "../engine/brevo-sync";
@@ -40,6 +41,8 @@ async function ingestOne(env: Env, ctx: ExecutionContext, raw: unknown, rawBody:
   const signals = inferSignals(ev.type, before, after);
   if (brevoSource) signals.push(`source:${brevoSource}`);
   const contact = await maybeReactivate(env, after, signals);
+  const country = cleanCountry(ev.attrs.country);
+  if (country) await setCountry(env, contact.id, country, "signup");
   const { enrolled, exited } = await applySignals(env, contact, signals);
 
   await env.DB.prepare("UPDATE events SET contact_id = ?, signals = ? WHERE event_id = ?")

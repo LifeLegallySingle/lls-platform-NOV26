@@ -127,18 +127,23 @@ async function syncBrevoContacts(env: Env, p: { offset?: number }): Promise<stri
 }
 
 /* ---------------- SLEE segment → Brevo list ---------------- */
+const NON_US_TLDS = ["uk","de","ca","jp","fr","in","be","it","au","nl","es","br","mx","ch","se","no","dk","ie","nz","za","sg","ph","pl","pt","at","ru","cn","kr","tw","hk","il","ae","ar","cl","fi","gr","hu","cz","ro","tr","ua","my","id","th","vn","pk","ng","ke","eg","sa","lt","lv","ee","sk","si","hr","rs","bg","lu","is"];
+const NON_US_DOMAIN_SQL = NON_US_TLDS.map((t) => `c.email LIKE '%.${t}'`).join(" OR ");
 const SEGMENTS: Record<string, string> = {
   // Safest send group: real, active, not blocklisted, and signed up in 2026 or used a product (quiz, Power Move…) or a SLEE form.
   tier_a: `SELECT email FROM contacts WHERE status='active' AND quality='ok'
              AND (COALESCE(json_extract(attrs,'$.brevo_created'), created_at) >= '2026-01-01'
                   OR cohort = 'brevo-product' OR json_extract(attrs,'$.sources') IS NOT NULL OR sah_score IS NOT NULL)
              AND email NOT LIKE 'test%' AND email NOT LIKE '%+%test%' AND email NOT LIKE 'muse%@lifelegallysingle.com'`,
+  // Tier A, US only: known country = US, or unknown country with no non-US email domain (.uk, .de, .ca …).
+  tier_a_us: `SELECT email FROM (${"__TIER_A__"}) t JOIN contacts c USING (email)
+                WHERE c.country = 'US' OR (c.country IS NULL AND NOT (${NON_US_DOMAIN_SQL}))`,
   // Never send: bots, suspect addresses, Brevo-blocklisted, bounced, complained, unsubscribed.
   do_not_send: `SELECT email FROM contacts WHERE status <> 'active' OR quality <> 'ok' UNION SELECT email FROM suppressions`,
 };
 
 async function buildBrevoList(env: Env, segment: string, p: { name?: string; offset?: number }): Promise<string> {
-  const sql = SEGMENTS[segment];
+  const sql = (SEGMENTS[segment] || "").replace("__TIER_A__", SEGMENTS.tier_a);
   if (!sql) throw new Error(`unknown segment ${segment}`);
   const name = p.name || `SLEE · ${segment}`;
   // find or create list in folder SLEE

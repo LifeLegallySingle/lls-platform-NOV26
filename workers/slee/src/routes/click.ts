@@ -3,11 +3,12 @@ import { nowIso } from "../env";
 import { b64urlDecode, hmacHex, safeEqual } from "../lib/crypto";
 import { getById } from "../engine/contacts";
 import { applySignals } from "../engine/enroll";
+import { cleanCountry, setCountry } from "../engine/country";
 import { queueFeedback } from "../engine/feedback";
 import { ciaTier, parseAttrs } from "../engine/derive";
 
 /** GET /c/:sendId/:dest/:sig — log click, push to HUB, redirect with HUB identity restore + UTMs. */
-export async function handleClick(env: Env, ctx: ExecutionContext, sendId: string, destB64: string, sig: string) {
+export async function handleClick(req: Request, env: Env, ctx: ExecutionContext, sendId: string, destB64: string, sig: string) {
   let dest: string;
   try { dest = b64urlDecode(destB64); } catch { return Response.redirect(env.SITE_URL, 302); }
   const expected = (await hmacHex(env.LINK_SECRET, `c|${sendId}|${dest}`)).slice(0, 24);
@@ -40,6 +41,7 @@ export async function handleClick(env: Env, ctx: ExecutionContext, sendId: strin
           .bind(clicks, now, cia, now, contact.id),
       ]);
       await applySignals(env, { ...contact, clicks, cia_tier: cia }, ["email.clicked"]);
+      await setCountry(env, contact.id, cleanCountry((req as any).cf?.country), "click");
       await queueFeedback(env, contact, "email.clicked", { url: dest, sequence: send.sequence, template: send.template, cia_tier: cia });
     })());
   }

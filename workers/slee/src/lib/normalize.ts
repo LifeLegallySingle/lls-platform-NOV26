@@ -63,7 +63,7 @@ export async function normalize(raw: any, rawBody: string): Promise<SleeEvent | 
   }
   // flat payloads: copy known top-level product keys too
   for (const k of ["sah_score", "sah_status", "sah_total", "sah_q15", "glotype_element", "glotype_score",
-    "power_move", "next_power_move", "page_source", "pm_source", "firstname", "str_freedom_tax", "datebase_city"]) {
+    "power_move", "next_power_move", "page_source", "pm_source", "firstname", "str_freedom_tax", "datebase_city", "country"]) {
     const v = pick(raw, k);
     if (v !== undefined && attrs[k] === undefined) attrs[k] = v;
   }

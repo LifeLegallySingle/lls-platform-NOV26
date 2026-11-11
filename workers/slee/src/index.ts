@@ -25,9 +25,9 @@ export default {
     const parts = path.split("/").filter(Boolean);
 
     try {
-      if (path === "/" || path === "/health") return json({ service: "slee", ok: true, version: "1.5.0" });
+      if (path === "/" || path === "/health") return json({ service: "slee", ok: true, version: "1.6.0" });
       if (req.method === "POST" && path === "/v1/event") return await handleEvent(req, env, ctx);
-      if (req.method === "GET" && parts[0] === "c" && parts.length === 4) return await handleClick(env, ctx, parts[1], parts[2], parts[3]);
+      if (req.method === "GET" && parts[0] === "c" && parts.length === 4) return await handleClick(req, env, ctx, parts[1], parts[2], parts[3]);
       if (parts[0] === "u" && parts.length === 3 && (req.method === "GET" || req.method === "POST")) return await handleUnsub(req, env, ctx, parts[1], parts[2]);
       if (req.method === "POST" && path === "/v1/webhooks/brevo") return await handleBrevoWebhook(req, env, ctx);
       if (path.startsWith("/v1/admin/")) {

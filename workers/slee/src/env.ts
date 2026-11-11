@@ -47,6 +47,9 @@ export interface Contact {
   last_soft_bounce_at: string | null;
   deliverability: string;
   brevo_synced_at: string | null;
+  country: string | null;
+  country_source: string | null;
+  country_at: string | null;
   brevo_error: string | null;
   created_at: string;
   updated_at: string;

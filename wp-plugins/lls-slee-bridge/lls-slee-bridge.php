@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       LLS SLEE Bridge
  * Description:       Connects LLS HUB to SLEE (Single Life Email Engine) on Cloudflare Workers. Signs HUB→SLEE events, retries anything that fails, and receives SLEE→HUB engagement feedback (clicks, unsubscribes, bounces).
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires PHP:      7.4
  * Author:            Life Legally Single™
  * Text Domain:       lls-slee-bridge
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('LLS_SLEE_BRIDGE_VERSION', '1.0.1');
+define('LLS_SLEE_BRIDGE_VERSION', '1.0.2');
 define('LLS_SLEE_OUTBOX_TABLE', 'lls_slee_outbox');
 
 /* -------------------------------------------------------------------------
@@ -78,6 +78,19 @@ function lls_slee_identify_url($email, $hub_id = null) {
     }
 }
 
+/** Look up the HUB identity's primary key by email (column name detected, cached per request). */
+function lls_slee_lookup_hub_id($email) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'lls_identities';
+    static $exists = null;
+    if ($exists === null) { $exists = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table); }
+    if (!$exists) { return null; }
+    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE email = %s LIMIT 1", $email), ARRAY_A);
+    if (!$row) { return null; }
+    foreach (array('id', 'identity_id', 'hub_id', 'ID') as $k) { if (isset($row[$k]) && $row[$k] !== '') { return (string) $row[$k]; } }
+    return null;
+}
+
 function lls_slee_enrich(array $payload) {
     $email = '';
     foreach (array('email', 'EMAIL') as $k) { if (!empty($payload[$k])) { $email = (string) $payload[$k]; break; } }
@@ -90,6 +103,16 @@ function lls_slee_enrich(array $payload) {
             $q = wp_parse_url($url, PHP_URL_QUERY);
             if ($q) { $payload['identify_qs'] = $q; }
         }
+    }
+    // 1.0.2: approximate country from Cloudflare (2-letter code only; the IP address is never sent or stored).
+    if (empty($payload['country']) && !empty($_SERVER['HTTP_CF_IPCOUNTRY'])) {
+        $cc = strtoupper(substr(sanitize_text_field(wp_unslash($_SERVER['HTTP_CF_IPCOUNTRY'])), 0, 2));
+        if (preg_match('/^[A-Z]{2}$/', $cc) && $cc !== 'XX' && $cc !== 'T1') { $payload['country'] = $cc; }
+    }
+    // 1.0.2: HUB's own identity ID, so SLEE links to the exact HUB record (not just the email).
+    if ($email && empty($payload['hub_id'])) {
+        $hub_id = lls_slee_lookup_hub_id($email);
+        if ($hub_id) { $payload['hub_id'] = $hub_id; }
     }
     if (empty($payload['event_id'])) { $payload['event_id'] = wp_generate_uuid4(); }
     if (empty($payload['occurred_at'])) { $payload['occurred_at'] = gmdate('c'); }
