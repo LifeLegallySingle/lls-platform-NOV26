@@ -49,20 +49,19 @@ export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
   /** Nov 11, 2026 — Singles Day / Gift-Yourself Day deals (general audience, no personal data needed) */
   camp_singles_day_2026: (x) => ({
     layout: "campaign",
-    subject: "It’s 11.11. The only gift list today is yours.",
-    preheader: "Origins 25% off ends tonight. Perricone MD BOGO. Alo 30% off for members.",
+    subject: "11:11 Single Life Perks. 30% off Alo and more…",
+    preheader: "Happy Self-Gift Day. You deserve a self-gift every single day. Today comes with perks.",
     body:
-      label("11.11 · Gift-Yourself Day") +
-      headline("Happy Singles Day. It’s all yours.") +
-      para("The one shopping holiday made for people who shop for one. No couples’ bundles, no “buy two” guilt. Just a few genuinely good deals, checked on each brand’s own site.") +
-      rule.replace("44px 0", "30px 0") +
+      `<p style="margin:0 0 22px;text-align:center;font:700 15px/1.5 Helvetica,Arial,sans-serif;color:#0A0A0A;">30% off Alo Yoga, Origins, and more · <a href="${x.url("/singles-day-deals/")}" style="color:${PURPLE};">Get them all →</a></p>` +
+      `<a href="${x.url("/singles-day-deals/")}" style="text-decoration:none;"><img src="https://legallysingle.com/wp-content/uploads/2026/11/singles-day-self-gift-day-email-hero-2026.jpg" width="544" alt="Happy Self-Gift Day. You deserve a self-gift every single day. But today comes with perks." style="display:block;width:100%;max-width:544px;height:auto;border:0;margin:0 0 30px;"></a>` +
+      label("11.11 · Today’s perks") +
+      dealCard(x, "Body · Members only", "Alo", "30% off sitewide", "Join Alo’s free membership to unlock 30% off everything, from leggings to outerwear.", "https://www.aloyoga.com/", "Shop Alo") +
       dealCard(x, "Glow · Ends tonight", "Origins", "25% off sitewide", "Plus a free 6-piece deluxe gift on eligible $100 orders. Gift sets and travel sizes excluded.", "https://www.origins.com/", "Shop Origins") +
       dealCard(x, "Glow · Singles Day BOGO", "Perricone MD", "buy one, get one", "On bestsellers, with Singles Day duos at 50% off and duos priced $99 and under.", "https://www.perriconemd.com/", "Shop Perricone MD") +
-      dealCard(x, "Body · Members only", "Alo", "30% off sitewide", "Join Alo’s free membership to unlock 30% off everything, from leggings to outerwear.", "https://www.aloyoga.com/", "Shop Alo") +
-      blackBtn(x.url("/singles-day-deals/"), "See all Gift-Yourself picks") +
-      para(`<span style="font-size:14px;">Our Amazon picks by pillar (the Main Character candle, a cozy cardigan, a solo-travel backpack and more) are on the page above.</span>`) +
+      dealCard(x, "Glow · Self-gift pick", "Red light therapy", "at home", "An infrared therapy wrap for shoulders and back. A little daily ritual, just for you.", "/singles-day-deals/", "See the pick") +
+      blackBtn(x.url("/singles-day-deals/"), "Get them all") +
       para(`<strong>Thinking about solo travel?</strong> Check out the deals: <a href="${x.url("/solo-travel/deals/")}" style="color:${PURPLE};">Solo Travel Deals</a>`) +
-      `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">Offers checked on each brand’s website on November 9, 2026. Brands can change or end offers at any time, so confirm the final price at checkout. Some links on our website are affiliate links, which means we may earn a commission at no extra cost to you.</p>` +
+      `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">Offers checked on each brand’s website. Brands can change or end offers at any time, so confirm the final price at checkout. Some links on our website are affiliate links, which means we may earn a commission at no extra cost to you.</p>` +
       quoteLine(quoteFor(x.c.id)),
   }),
 
