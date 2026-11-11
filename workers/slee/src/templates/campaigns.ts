@@ -37,7 +37,35 @@ const money = (v: unknown) => {
   return Number.isFinite(n) && n > 0 ? "$" + Math.round(n).toLocaleString("en-US") : null;
 };
 
+const dealCard = (x: TCtx, tag: string, brand: string, offer: string, detail: string, href: string, cta: string) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;border-top:1px solid #0A0A0A;"><tr><td style="padding:16px 0 14px;">
+   <p style="margin:0 0 6px;font:700 11px/1.4 Helvetica,Arial,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:${PURPLE};">${tag}</p>
+   <p style="margin:0;font:800 20px/1.25 Helvetica,Arial,sans-serif;color:#0A0A0A;">${esc(brand)}: ${esc(offer)}</p>
+   <p style="margin:6px 0 10px;font:15px/1.55 Helvetica,Arial,sans-serif;color:#5A5A5A;">${esc(detail)}</p>
+   <a href="${x.url(href)}" style="font:700 11px/1.6 Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#0A0A0A;">${esc(cta)} →</a>
+  </td></tr></table>`;
+
 export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
+  /** Nov 11, 2026 — Singles Day / Gift-Yourself Day deals (general audience, no personal data needed) */
+  camp_singles_day_2026: (x) => ({
+    layout: "campaign",
+    subject: "It’s 11.11. The only gift list today is yours.",
+    preheader: "Origins 25% off ends tonight. Perricone MD BOGO. Alo 30% off for members.",
+    body:
+      label("11.11 · Gift-Yourself Day") +
+      headline("Happy Singles Day. It’s all yours.") +
+      para("The one shopping holiday made for people who shop for one. No couples’ bundles, no “buy two” guilt. Just a few genuinely good deals, checked on each brand’s own site.") +
+      rule.replace("44px 0", "30px 0") +
+      dealCard(x, "Glow · Ends tonight", "Origins", "25% off sitewide", "Plus a free 6-piece deluxe gift on eligible $100 orders. Gift sets and travel sizes excluded.", "https://www.origins.com/", "Shop Origins") +
+      dealCard(x, "Glow · Singles Day BOGO", "Perricone MD", "buy one, get one", "On bestsellers, with Singles Day duos at 50% off and duos priced $99 and under.", "https://www.perriconemd.com/", "Shop Perricone MD") +
+      dealCard(x, "Body · Members only", "Alo", "30% off sitewide", "Join Alo’s free membership to unlock 30% off everything, from leggings to outerwear.", "https://www.aloyoga.com/", "Shop Alo") +
+      blackBtn(x.url("/singles-day-deals/"), "See all Gift-Yourself picks") +
+      para(`<span style="font-size:14px;">Our Amazon picks by pillar (the Main Character candle, a cozy cardigan, a solo-travel backpack and more) are on the page above.</span>`) +
+      para(`<strong>Thinking about solo travel?</strong> Check out the deals: <a href="${x.url("/solo-travel/deals/")}" style="color:${PURPLE};">Solo Travel Deals</a>`) +
+      `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">Offers checked on each brand’s website on November 9, 2026. Brands can change or end offers at any time, so confirm the final price at checkout. Some links on our website are affiliate links, which means we may earn a commission at no extra cost to you.</p>` +
+      quoteLine(quoteFor(x.c.id)),
+  }),
+
   /** Nov 11, 2026 — Freedom Tax™ 2026 recheck + Gift-Yourself Day (Singles Day) */
   camp_ftax_giftyourself_2026: (x) => {
     const num = money(x.attrs.str_freedom_tax);

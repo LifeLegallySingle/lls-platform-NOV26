@@ -98,7 +98,8 @@ async function syncBrevoContacts(env: Env, p: { offset?: number }): Promise<stri
     const a = c.attributes || {};
     const bot = gib(a.FIRSTNAME) || gib(a.CITY) || gib(a.SINGLE_REASON);
     const lists: number[] = c.listIds || [];
-    const product = a.SAH_SCORE != null || a.GLOTYPE_ELEMENT || a.POWER_MOVE || a.STR_FREEDOM_TAX || a.PAGE_SOURCE;
+    const has = (v: unknown) => v !== null && v !== undefined && String(v).trim() !== "";
+    const product = has(a.SAH_SCORE) || has(a.GLOTYPE_ELEMENT) || has(a.POWER_MOVE) || has(a.STR_FREEDOM_TAX) || has(a.PAGE_SOURCE);
     let cohort = "brevo-other";
     if (product) cohort = "brevo-product";
     else for (const id of [2, 27, 13, 7, 19, 15, 75, 4]) if (lists.includes(id)) { cohort = COHORT_BY_LIST[id]; break; }
@@ -145,7 +146,8 @@ const SEGMENTS: Record<string, string> = {
   tier_a: `SELECT email FROM contacts WHERE status='active' AND quality='ok'
              AND (COALESCE(json_extract(attrs,'$.brevo_created'), created_at) >= '2026-01-01'
                   OR cohort = 'brevo-product' OR json_extract(attrs,'$.sources') IS NOT NULL OR sah_score IS NOT NULL)
-             AND email NOT LIKE 'test%' AND email NOT LIKE '%+%test%' AND email NOT LIKE 'muse%@lifelegallysingle.com'`,
+             AND email NOT LIKE 'test%' AND email NOT LIKE '%+%test%' AND email NOT LIKE '%@lifelegallysingle.com'
+             AND email NOT LIKE 'jenatjaw%' AND email NOT LIKE 'legallysingle.com%@gmail.com' AND email NOT LIKE '%@example.com'`,
   // Tier A, US only: known country = US, or unknown country with no non-US email domain (.uk, .de, .ca …).
   tier_a_us: `SELECT email FROM (${"__TIER_A__"}) t JOIN contacts c USING (email)
                 WHERE c.country = 'US' OR (c.country IS NULL AND NOT (${NON_US_DOMAIN_SQL}))`,
@@ -175,19 +177,27 @@ async function buildBrevoList(env: Env, segment: string, p: { name?: string; off
   const emails = results.map((r) => r.email);
   let removed = 0;
   if (isSend) {
-    // 12-hour rule: take recently mailed people OUT of this send list (they may have been added by an earlier build)
-    const recent = (await env.DB.prepare(`SELECT email FROM (${sql}) WHERE email IN (${recentlyMailedSql()})`).all<{ email: string }>()).results.map((r) => r.email);
-    for (let i = 0; i < recent.length; i += 150) {
-      const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/remove`, { emails: recent.slice(i, i + 150) });
+    // Full sync: remove anyone on the Brevo list who no longer qualifies (test addresses, unsubscribed, etc.)
+    const keep = new Set(emails);
+    const stale: string[] = [];
+    for (let off = 0; off < 2000; off += 500) {
+      const l = await brevo(env, "GET", `/contacts/lists/${listId}/contacts?limit=500&offset=${off}`);
+      const page: any[] = l.data?.contacts ?? [];
+      for (const c of page) if (c.email && !keep.has(String(c.email).toLowerCase())) stale.push(String(c.email).toLowerCase());
+      if (page.length < 500) break;
+    }
+    for (let i = 0; i < stale.length; i += 150) {
+      const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/remove`, { emails: stale.slice(i, i + 150) });
       if (r.ok) removed += (r.data?.contacts?.success ?? []).length;
     }
   }
+
   let added = 0;
   for (let i = 0; i < emails.length; i += 150) {
     const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/add`, { emails: emails.slice(i, i + 150) });
     if (r.ok) added += (r.data?.contacts?.success ?? []).length;
   }
-  return `list ${listId} "${name}": ${emails.length} selected, ${added} added, ${removed} removed (mailed in last ${MARKETING_MIN_GAP_HOURS}h)`;
+  return `list ${listId} "${name}": ${emails.length} qualify, ${added} added, ${removed} removed (no longer qualify / mailed in last ${MARKETING_MIN_GAP_HOURS}h)`;
 }
 
 /* ---------------- Broadcasts (SLEE campaigns) ----------------
