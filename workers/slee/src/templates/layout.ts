@@ -36,3 +36,23 @@ export function htmlToText(h: string) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/** Campaign layout ("editorial minimal"): white canvas, black wordmark bar, uppercase micro-labels, purple accents. */
+export function campaignLayout(o: { preheader: string; body: string; unsubUrl: string; address: string }) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>${esc(BRAND.name)}</title></head>
+<body style="margin:0;padding:0;background:#FFFFFF;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(o.preheader)}&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+<tr><td style="background:#0A0A0A;padding:18px 28px;text-align:center;font:700 13px/1 Helvetica,Arial,sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#FFFFFF;">Life Legally Single™</td></tr>
+<tr><td style="padding:44px 28px 8px;font:16px/1.65 Helvetica,Arial,sans-serif;color:#0A0A0A;">
+${o.body}
+</td></tr>
+<tr><td style="padding:28px 28px 40px;border-top:1px solid #EAEAEA;text-align:center;font:11px/1.7 Helvetica,Arial,sans-serif;letter-spacing:.06em;color:#8A8A8A;">
+<span style="text-transform:uppercase;letter-spacing:.22em;color:#0A0A0A;">Being single is a Power Move™</span><br><br>
+You’re getting this because you used a Life Legally Single™ tool.<br>${esc(o.address)}<br>
+<a href="${o.unsubUrl}" style="color:#8A8A8A;">Unsubscribe</a>
+</td></tr></table>
+</td></tr></table></body></html>`;
+}

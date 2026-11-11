@@ -2,6 +2,7 @@ import type { Contact } from "../env";
 import { BRAND, LINKS } from "../config";
 import { esc } from "./layout";
 import { quoteFor } from "./quotes";
+import { CAMPAIGNS } from "./campaigns";
 
 export interface TCtx {
   c: Contact;
@@ -9,7 +10,7 @@ export interface TCtx {
   first: string;                                  // "Hi Ana" / "Hi there"
   url: (path: string) => string;                  // tracked link placeholder
 }
-export interface Rendered { subject: string; preheader: string; body: string }
+export interface Rendered { subject: string; preheader: string; body: string; layout?: "campaign" }
 type Tpl = (x: TCtx) => Rendered;
 
 const p = (s: string) => `<p style="margin:0 0 16px;">${s}</p>`;
@@ -220,4 +221,5 @@ export const TEMPLATES: Record<string, Tpl> = {
       p("We only want to be in inboxes that want us. If you'd like to keep hearing from us, tap below. If not, you don't need to do anything — we'll stop emailing you soon.") +
       btn(x, LINKS.sahQuiz, "Yes, keep me in"),
   }),
+  ...CAMPAIGNS,
 };

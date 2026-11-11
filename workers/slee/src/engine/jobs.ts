@@ -1,6 +1,9 @@
 import type { Env } from "../env";
 import { nowIso } from "../env";
 import { brevoApi } from "../lib/brevo";
+import type { Contact } from "../env";
+import { sendPreview, sendTemplate } from "./send";
+import { TEMPLATES } from "../templates";
 
 /**
  * One-off admin jobs, queued by inserting a row into slee_jobs (status 'pending'); the cron runs at most one per tick.
@@ -68,6 +71,13 @@ export async function runOneJob(env: Env): Promise<{ job: string; status: string
       }
     } else if (job.job.startsWith("brevo_list_build:")) {
       result = await buildBrevoList(env, job.job.split(":")[1], JSON.parse(job.params || "{}"));
+    } else if (job.job.startsWith("broadcast:")) {
+      const r = await runBroadcast(env, job.job.split(":").slice(1).join(":"), JSON.parse(job.params || "{}"));
+      if (r.startsWith("more:")) {
+        await env.DB.prepare("UPDATE slee_jobs SET status='pending', result=? WHERE job=?").bind(r, job.job).run();
+        return { job: job.job, status: "pending", result: r };
+      }
+      result = r;
     } else { status = "error"; result = "unknown job"; }
   } catch (e) { status = "error"; result = String(e).slice(0, 300); }
   await env.DB.prepare("UPDATE slee_jobs SET status = ?, result = ?, done_at = ? WHERE job = ?").bind(status, result, nowIso(), job.job).run();
@@ -166,4 +176,37 @@ async function buildBrevoList(env: Env, segment: string, p: { name?: string; off
     if (r.ok) added += (r.data?.contacts?.success ?? []).length;
   }
   return `list ${listId} "${name}": ${emails.length} selected, ${added} added`;
+}
+
+/* ---------------- Broadcasts (SLEE campaigns) ----------------
+ * Queue: INSERT INTO slee_jobs (job, params) VALUES ('broadcast:<name>', '{"template":"…","emails":[…],"test_to":"you@…"}')
+ *   test_to set + no "live":true  → ONE real preview email to test_to (personalized with the first recipient)
+ *   "live":true                    → sends to every active, non-suppressed recipient once (deduped), 10 per tick
+ */
+async function runBroadcast(env: Env, name: string, p: { template: string; emails?: string[]; test_to?: string; live?: boolean }): Promise<string> {
+  if (!TEMPLATES[p.template]) throw new Error(`unknown template ${p.template}`);
+  const emails = (p.emails ?? []).map((e) => String(e).trim().toLowerCase()).filter(Boolean);
+  if (!emails.length) throw new Error("no recipients");
+  const J = JSON.stringify(emails);
+  if (!p.live) {
+    if (!p.test_to) throw new Error("preview needs test_to");
+    const c = await env.DB.prepare("SELECT * FROM contacts WHERE email IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1").bind(J).first<Contact>();
+    if (!c) throw new Error("no recipient found in SLEE");
+    const r = await sendPreview(env, c, p.template, p.test_to);
+    return r.ok ? `preview sent to ${p.test_to} (personalized as ${c.email})` : `preview failed: ${r.error}`;
+  }
+  const seq = `broadcast:${name}`;
+  const { results } = await env.DB.prepare(
+    `SELECT c.* FROM contacts c WHERE c.email IN (SELECT value FROM json_each(?1)) AND c.status = 'active'
+       AND c.email NOT IN (SELECT email FROM suppressions)
+       AND NOT EXISTS (SELECT 1 FROM sends s WHERE s.contact_id = c.id AND s.sequence = ?2 AND s.status IN ('sent','dry_run'))
+     ORDER BY c.id LIMIT 6`
+  ).bind(J, seq).all<Contact>();
+  let sent = 0, failed = 0;
+  for (const c of results) {
+    const r = await sendTemplate(env, c, p.template, { sequence: seq, forceLive: true });
+    r.ok ? sent++ : failed++;
+  }
+  const done = await env.DB.prepare(`SELECT COUNT(*) n FROM sends WHERE sequence = ? AND status = 'sent'`).bind(seq).first<{ n: number }>();
+  return results.length === 6 ? `more: ${done?.n ?? 0} sent so far` : `done: ${done?.n ?? 0} sent total (${failed} failed this tick)`;
 }
