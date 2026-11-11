@@ -55,6 +55,8 @@ const dealCardImg = (x: TCtx, tag: string, title: string, detail: string, img: s
    <a href="${x.url(href)}" style="font:700 11px/1.6 Helvetica,Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#0A0A0A;">${esc(cta)} →</a>
   </td></tr></table>`;
 
+const AMAZON_RED_LIGHT = "https://www.amazon.com/Puroth-Therapy-Infrared-Adjustable-Shoulders/dp/B0HBC7B6LY?crid=CS2FPU4X3FG8&dib=eyJ2IjoiMSJ9.MJRRR1opAlz-tvGzYAnmSV5GAOlWX2Tmv5SH9bXA53KlEAebWerrzh1IYS5Gz-2xaxTL9sKztFTk-gMsALrKjDjQUeBfwaTEzZMKoSf1T-uJiCMHAEUxg93nkK9OJj8bQMWZ55MkWuUtFgnVVSVvjofsNgKRzNCcDByAsJhK5uJ8xmi3dDXMfz1wobPn0fTJuU-hOeKNSS14NjLZA0ZNJoqSK5v6_CIIfL9yRjGaPjAmq8qhWZMSrCvE2cIyaj_aOttV2Bn_JvDcuEYJwd_T3YDMk6qzkI_BbjDV0dk-tvQ.gOy_R1DX-ctefDBFAjesF-HdUohrMFXcpLRoXHER05s&dib_tag=se&keywords=red%2Blight%2Btherapy&qid=1794409761&sprefix=red%2Blight%2Btherap%2Caps%2C200&sr=8-5-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1&linkCode=ll2&tag=lifelegallysi-20&linkId=ea1165c0f74bdb0727d3c6c3213df8a9&language=en_US&gaOptInStatus=true&ref_=as_li_ss_tl";
+
 export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
   /** Nov 11, 2026 — Singles Day / Gift-Yourself Day deals (general audience, no personal data needed) */
   camp_singles_day_2026: (x) => ({
@@ -63,13 +65,11 @@ export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
     preheader: "Happy Self-Gift Day. You deserve a self-gift every single day. Today comes with perks.",
     body:
       `<p style="margin:0 0 22px;text-align:center;font:700 15px/1.5 Helvetica,Arial,sans-serif;color:#0A0A0A;">30% off Alo Yoga, Origins, and more · <a href="${x.url("/singles-day-deals/")}" style="color:${PURPLE};">Get them all →</a></p>` +
-      `<a href="${x.url("/singles-day-deals/")}" style="text-decoration:none;"><img src="https://legallysingle.com/wp-content/uploads/2026/11/singles-day-self-gift-day-email-hero-2026.jpg" width="544" alt="Happy Self-Gift Day. You deserve a self-gift every single day. But today comes with perks." style="display:block;width:100%;max-width:544px;height:auto;border:0;margin:0 0 30px;"></a>` +
+      `<a href="${x.url("/singles-day-deals/")}" style="text-decoration:none;"><img src="https://legallysingle.com/wp-content/uploads/2026/11/happy-singles-day-self-gift-email-hero-2026.jpg" width="544" alt="Happy Singles Day, now Self-Gift Day. You deserve a self-gift every single day. But today comes with perks." style="display:block;width:100%;max-width:544px;height:auto;border:0;margin:0 0 30px;"></a>` +
       label("11.11 · Today’s perks") +
-      dealCard(x, "Body · Members only", "Alo", "30% off sitewide", "Join Alo’s free membership to unlock 30% off everything, from leggings to outerwear.", "https://www.aloyoga.com/", "Shop Alo") +
-      dealCard(x, "Glow · Ends tonight", "Origins", "25% off sitewide", "Plus a free 6-piece deluxe gift on eligible $100 orders. Gift sets and travel sizes excluded.", "https://www.origins.com/", "Shop Origins") +
-      dealCard(x, "Glow · Singles Day BOGO", "Perricone MD", "buy one, get one", "On bestsellers, with Singles Day duos at 50% off and duos priced $99 and under.", "https://www.perriconemd.com/", "Shop Perricone MD") +
       dealCardImg(x, "Glow · Self-gift pick", "Red light therapy, at home", "An infrared therapy wrap for shoulders and back. A little daily ritual, just for you.",
-        "https://m.media-amazon.com/images/I/71eo6Z3b8iL._AC_SL1500_.jpg", "Puroth red light therapy wrap for shoulders", "/singles-day-deals/", "See the pick") +
+        "https://m.media-amazon.com/images/I/71eo6Z3b8iL._AC_SL1500_.jpg", "Puroth red light therapy wrap for shoulders", AMAZON_RED_LIGHT, "Shop on Amazon") +
+      `<p style="margin:0 0 24px;font:12px/1.5 Helvetica,Arial,sans-serif;color:#8A8A8A;">As an Amazon Associate, we earn from qualifying purchases.</p>` +
       blackBtn(x.url("/singles-day-deals/"), "Get them all") +
       para(`<strong>Thinking about solo travel?</strong> Check out the deals: <a href="${x.url("/solo-travel/deals/")}" style="color:${PURPLE};">Solo Travel Deals</a>`) +
       `<p style="margin:18px 0 0;font:12px/1.6 Helvetica,Arial,sans-serif;color:#8A8A8A;">Offers checked on each brand’s website. Brands can change or end offers at any time, so confirm the final price at checkout. Some links on our website are affiliate links, which means we may earn a commission at no extra cost to you.</p>` +
