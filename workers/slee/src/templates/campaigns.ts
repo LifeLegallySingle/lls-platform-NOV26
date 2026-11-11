@@ -66,7 +66,7 @@ export const CAMPAIGNS: Record<string, (x: TCtx) => Rendered> = {
     body:
       `<p style="margin:0 0 22px;text-align:center;font:700 15px/1.5 Helvetica,Arial,sans-serif;color:#0A0A0A;">30% off Alo Yoga, Origins, and more · <a href="${x.url("/singles-day-deals/")}" style="color:${PURPLE};">Get them all →</a></p>` +
       `<a href="${x.url("/singles-day-deals/")}" style="text-decoration:none;"><img src="https://legallysingle.com/wp-content/uploads/2026/11/happy-singles-day-self-gift-email-hero-2026.jpg" width="544" alt="Happy Singles Day, now Self-Gift Day. You deserve a self-gift every single day. But today comes with perks." style="display:block;width:100%;max-width:544px;height:auto;border:0;margin:0 0 30px;"></a>` +
-      label("11.11 · Today’s perks") +
+      label("Our Self-Care Pick") +
       dealCardImg(x, "Glow · Self-gift pick", "Red light therapy, at home", "An infrared therapy wrap for shoulders and back. A little daily ritual, just for you.",
         "https://m.media-amazon.com/images/I/71eo6Z3b8iL._AC_SL1500_.jpg", "Puroth red light therapy wrap for shoulders", AMAZON_RED_LIGHT, "Shop on Amazon") +
       `<p style="margin:0 0 24px;font:12px/1.5 Helvetica,Arial,sans-serif;color:#8A8A8A;">As an Amazon Associate, we earn from qualifying purchases.</p>` +
