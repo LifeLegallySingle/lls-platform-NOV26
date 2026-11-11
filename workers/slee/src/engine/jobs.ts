@@ -79,7 +79,7 @@ const COHORT_BY_LIST: Record<number, string> = { 2: "wave1", 27: "wave1", 13: "w
 const gib = (v: unknown) => typeof v === "string" && /^[A-Za-z]{6,}$/.test(v) && (v.slice(1).match(/[A-Z]/g) || []).length >= 2;
 
 async function syncBrevoContacts(env: Env, p: { offset?: number }): Promise<string> {
-  const offset = p.offset ?? 0, limit = 500;
+  const offset = p.offset ?? 0, limit = 150; // small pages: free plan = 10ms CPU per run
   const r = await brevo(env, "GET", `/contacts?limit=${limit}&offset=${offset}&sort=asc`);
   if (!r.ok) throw new Error(`brevo ${r.status}: ${JSON.stringify(r.data).slice(0, 200)}`);
   const list: any[] = r.data?.contacts ?? [];
