@@ -14,7 +14,7 @@ enabled = true
 
 # Scheduler: sends due sequence steps + flushes HUB feedback outbox.
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]   # every minute (free plan OK); was */5
 
 [[d1_databases]]
 binding = "DB"
