@@ -44,6 +44,9 @@ export const BREVO_SYNC = {
   ],
 };
 
+/** Marketing frequency rule: nobody gets two marketing emails (campaigns/broadcasts) within this many hours. */
+export const MARKETING_MIN_GAP_HOURS = 12;
+
 export const BRAND = {
   logoUrl: "https://legallysingle.com/wp-content/uploads/2025/12/cropped-LOGO-230x230.png", // site logo (black square, white type)
   name: "Life Legally Single™",

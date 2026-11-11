@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { nowIso } from "../env";
 import { brevoApi } from "../lib/brevo";
+import { MARKETING_MIN_GAP_HOURS } from "../config";
 import type { Contact } from "../env";
 import { sendPreview, sendTemplate } from "./send";
 import { TEMPLATES } from "../templates";
@@ -168,14 +169,25 @@ async function buildBrevoList(env: Env, segment: string, p: { name?: string; off
   }
   if (!listId) { const c = await brevo(env, "POST", "/contacts/lists", { name, folderId }); listId = c.data?.id; }
   if (!listId) throw new Error("could not create list");
-  const { results } = await env.DB.prepare(sql).all<{ email: string }>();
+  const isSend = segment !== "do_not_send";
+  const finalSql = isSend ? `SELECT email FROM (${sql}) WHERE email NOT IN (${recentlyMailedSql()})` : sql;
+  const { results } = await env.DB.prepare(finalSql).all<{ email: string }>();
   const emails = results.map((r) => r.email);
+  let removed = 0;
+  if (isSend) {
+    // 12-hour rule: take recently mailed people OUT of this send list (they may have been added by an earlier build)
+    const recent = (await env.DB.prepare(`SELECT email FROM (${sql}) WHERE email IN (${recentlyMailedSql()})`).all<{ email: string }>()).results.map((r) => r.email);
+    for (let i = 0; i < recent.length; i += 150) {
+      const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/remove`, { emails: recent.slice(i, i + 150) });
+      if (r.ok) removed += (r.data?.contacts?.success ?? []).length;
+    }
+  }
   let added = 0;
   for (let i = 0; i < emails.length; i += 150) {
     const r = await brevo(env, "POST", `/contacts/lists/${listId}/contacts/add`, { emails: emails.slice(i, i + 150) });
     if (r.ok) added += (r.data?.contacts?.success ?? []).length;
   }
-  return `list ${listId} "${name}": ${emails.length} selected, ${added} added`;
+  return `list ${listId} "${name}": ${emails.length} selected, ${added} added, ${removed} removed (mailed in last ${MARKETING_MIN_GAP_HOURS}h)`;
 }
 
 /* ---------------- Broadcasts (SLEE campaigns) ----------------
@@ -200,6 +212,7 @@ async function runBroadcast(env: Env, name: string, p: { template: string; email
     `SELECT c.* FROM contacts c WHERE c.email IN (SELECT value FROM json_each(?1)) AND c.status = 'active'
        AND c.email NOT IN (SELECT email FROM suppressions)
        AND NOT EXISTS (SELECT 1 FROM sends s WHERE s.contact_id = c.id AND s.sequence = ?2 AND s.status IN ('sent','dry_run'))
+       AND c.email NOT IN (${recentlyMailedSql()})
      ORDER BY c.id LIMIT 6`
   ).bind(J, seq).all<Contact>();
   let sent = 0, failed = 0;
@@ -209,4 +222,12 @@ async function runBroadcast(env: Env, name: string, p: { template: string; email
   }
   const done = await env.DB.prepare(`SELECT COUNT(*) n FROM sends WHERE sequence = ? AND status = 'sent'`).bind(seq).first<{ n: number }>();
   return results.length === 6 ? `more: ${done?.n ?? 0} sent so far` : `done: ${done?.n ?? 0} sent total (${failed} failed this tick)`;
+}
+
+/** Emails that got a marketing email in the last MARKETING_MIN_GAP_HOURS (SLEE broadcasts + Brevo campaigns). */
+export function recentlyMailedSql(): string {
+  const cutoff = new Date(Date.now() - MARKETING_MIN_GAP_HOURS * 3600_000).toISOString();
+  return `SELECT c2.email FROM sends s JOIN contacts c2 ON c2.id = s.contact_id
+            WHERE s.status = 'sent' AND s.sequence LIKE 'broadcast:%' AND s.sent_at >= '${cutoff}'
+          UNION SELECT email FROM email_events WHERE channel = 'marketing' AND type IN ('sent','delivered') AND created_at >= '${cutoff}'`;
 }
