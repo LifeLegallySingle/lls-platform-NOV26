@@ -45,6 +45,7 @@ export const BREVO_SYNC = {
 };
 
 export const BRAND = {
+  logoUrl: "https://legallysingle.com/wp-content/uploads/2025/12/cropped-LOGO-230x230.png", // site logo (black square, white type)
   name: "Life Legally Single™",
   accent: "#6427b0",   // LLS brand purple
   ink: "#141414",
