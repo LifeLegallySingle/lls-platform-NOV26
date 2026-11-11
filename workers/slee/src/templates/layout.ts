@@ -40,15 +40,16 @@ export function htmlToText(h: string) {
 /** Campaign layout ("editorial minimal"): white canvas, black wordmark bar, uppercase micro-labels, purple accents. */
 export function campaignLayout(o: { preheader: string; body: string; unsubUrl: string; address: string }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>${esc(BRAND.name)}</title></head>
+<meta name="color-scheme" content="light"><title>${esc(BRAND.name)}</title>
+<style>@media only screen and (max-width:480px){.lls-tagline{font-size:15px !important;padding-left:10px !important;}.lls-logo{width:56px !important;height:56px !important;}}</style></head>
 <body style="margin:0;padding:0;background:#FFFFFF;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(o.preheader)}&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 <tr><td style="background:#000000;padding:12px 20px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;width:72px;"><a href="https://legallysingle.com/" style="text-decoration:none;"><img src="${BRAND.logoUrl}" width="72" height="72" alt="Life Legally Single" style="display:block;border:0;width:72px;height:72px;"></a></td>
-<td style="vertical-align:middle;padding-left:14px;font:800 20px/1.25 Helvetica,Arial,sans-serif;letter-spacing:-.01em;color:#FFFFFF;">Being Single is a Power Move™</td>
+<td style="vertical-align:middle;"><a href="https://legallysingle.com/" style="text-decoration:none;"><img class="lls-logo" src="${BRAND.logoUrl}" width="72" height="72" alt="Life Legally Single" style="display:block;border:0;width:72px;height:72px;"></a></td>
+<td class="lls-tagline" style="vertical-align:middle;padding-left:14px;font:800 20px/1.25 Helvetica,Arial,sans-serif;letter-spacing:-.01em;color:#FFFFFF;white-space:nowrap;">Being Single is a Power Move™</td>
 </tr></table></td></tr>
 <tr><td style="padding:44px 28px 8px;font:16px/1.65 Helvetica,Arial,sans-serif;color:#0A0A0A;">
 ${o.body}
