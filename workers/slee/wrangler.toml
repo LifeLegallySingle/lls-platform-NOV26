@@ -36,7 +36,7 @@ BATCH_SIZE = "6"            # sends per cron run (free plan: 50 D1 queries/invoc
 MIN_HOURS_BETWEEN_EMAILS = "20"
 DRY_RUN = "true"            # "true" = render + log, no real sends. Flip to "false" to go live.
 LIVE_TEMPLATES = "memes_1,deals_1"          # e.g. "confirm_memes,bp_delivery": these send for real even while DRY_RUN is on
-MONITOR_EMAIL = "legallysingle.com+SLEE@gmail.com"   # safe copy of every live SLEE email (plain links, no unsubscribe); "" to turn off
+MONITOR_EMAIL = "legallysingle.com+SLEE@gmail.com"   # safe copy of the FIRST live send of each email (plain links, no unsubscribe); "" to turn off
 
 # Secrets (set with `npx wrangler secret put NAME`, never commit):
 #   HUB_SHARED_SECRET   — HMAC secret shared with the WP bridge plugin (HUB <-> SLEE)

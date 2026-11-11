@@ -40,7 +40,11 @@ export async function sendTemplate(
       unsubUrl: msg.unsub, sendId, tags: [meta.sequence ?? "manual", templateId],
     });
     status = r.ok ? "sent" : "failed";
-    if (r.ok && env.MONITOR_EMAIL && env.MONITOR_EMAIL.toLowerCase() !== c.email.toLowerCase()) {
+    // Monitor: only the FIRST live send of each email (template) gets a copy, not every recipient.
+    const firstLive = r.ok && env.MONITOR_EMAIL && env.MONITOR_EMAIL.toLowerCase() !== c.email.toLowerCase()
+      ? !(await env.DB.prepare("SELECT 1 FROM sends WHERE template = ? AND status = 'sent' LIMIT 1").bind(templateId).first())
+      : false;
+    if (firstLive) {
       await sendMonitorCopy(env, c.email, templateId, msg).catch(() => {});
     }
     providerId = r.id ?? null;
