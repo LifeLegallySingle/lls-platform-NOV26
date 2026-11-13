@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       LLS Nudge
  * Description:       Small, SEO-safe site-wide nudge (desktop slide-in card, mobile bottom bar). First use: the 2026 Freedom Tax™ ("singles tax") calculator.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            Life Legally Single™
  * License:           GPL-2.0-or-later
  * Text Domain:       lls-nudge
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('LLS_NUDGE_VERSION', '1.0.0');
+define('LLS_NUDGE_VERSION', '1.0.1');
 
 /**
  * Default config. Override any key with the `lls_nudge_config` filter.
@@ -21,13 +21,13 @@ function lls_nudge_config() {
     $c = array(
         'id'          => 'ftax_2026',
         'text_before' => 'What’s your 2026 “singles tax”?',
-        'text_cta'    => 'Check your Freedom Tax™ free →',
+        'text_sub'    => 'Your Freedom Tax™, in 2 minutes.',
+        'text_cta'    => 'Check it for Free',
         'url'         => home_url('/freedom-tax-calculator/'),
         'utm'         => 'utm_source=site&utm_medium=nudge&utm_campaign=ftax_nudge',
         'hide_paths'  => array('/freedom-tax-calculator/'),   // never show here
         'done_product'=> 'freedom_tax',                        // HUB product that means "already did it"
-        'delay_ms'    => 30000,                                // show after 30s…
-        'scroll_pct'  => 50,                                   // …or after scrolling half the page
+        'delay_ms'    => 1200,                                 // show this long after the full page has loaded
         'cap_days'    => 7,                                    // at most once a week per visitor
         'done_days'   => 60,                                   // hide this long after visiting the calculator
         'accent'      => '#6427b0',                            // brand purple
@@ -97,9 +97,9 @@ add_action('wp_footer', function () {
         'id'    => $c['id'],
         'href'  => esc_url_raw($href),
         'a'     => $c['text_before'],
+        'sub'   => $c['text_sub'],
         'b'     => $c['text_cta'],
         'delay' => (int) $c['delay_ms'],
-        'pct'   => (int) $c['scroll_pct'],
         'cap'   => (int) $c['cap_days'],
         'done'  => (int) $c['done_days'],
         'force' => isset($_GET['lls_nudge']) && $_GET['lls_nudge'] === 'preview',
@@ -107,17 +107,20 @@ add_action('wp_footer', function () {
     $accent = sanitize_hex_color($c['accent']) ?: '#6427b0';
     ?>
 <style id="lls-nudge-css">
-#lls-nudge{position:fixed;z-index:99990;right:20px;bottom:20px;max-width:340px;background:<?php echo $accent; ?>;color:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);font:inherit;transform:translateY(140%);opacity:0;transition:transform .45s ease,opacity .45s ease}
+#lls-nudge{position:fixed;z-index:99990;right:20px;bottom:20px;width:320px;background:<?php echo $accent; ?>;color:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);font:inherit;padding:18px 20px 18px 20px;box-sizing:border-box;transform:translateY(140%);opacity:0;transition:transform .45s ease,opacity .45s ease}
 #lls-nudge.lls-in{transform:translateY(0);opacity:1}
-#lls-nudge a.lls-nudge-link{display:block;padding:16px 44px 16px 18px;color:#fff;text-decoration:none;font-size:15px;line-height:1.45}
-#lls-nudge a.lls-nudge-link strong{display:block;font-size:17px;margin-bottom:2px}
-#lls-nudge a.lls-nudge-link span{text-decoration:underline;text-underline-offset:3px}
+#lls-nudge .lls-nudge-h{display:block;font-size:17px;font-weight:700;line-height:1.3;margin:0 22px 4px 0}
+#lls-nudge .lls-nudge-s{display:block;font-size:14px;line-height:1.4;opacity:.92;margin:0 0 12px}
+#lls-nudge a.lls-nudge-btn{display:block;text-align:center;background:#fff;color:<?php echo $accent; ?>;font-weight:700;font-size:15px;line-height:1;padding:12px 16px;border-radius:999px;text-decoration:none}
+#lls-nudge a.lls-nudge-btn:hover,#lls-nudge a.lls-nudge-btn:focus{box-shadow:0 0 0 3px rgba(255,255,255,.45)}
 #lls-nudge button{position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:6px;opacity:.85}
 #lls-nudge button:hover,#lls-nudge button:focus{opacity:1}
 @media (max-width:600px){
- #lls-nudge{left:0;right:0;bottom:0;max-width:none;border-radius:0}
- #lls-nudge a.lls-nudge-link{padding:12px 44px 12px 16px;font-size:14px}
- #lls-nudge a.lls-nudge-link strong{display:inline;font-size:14px;margin:0 4px 0 0}
+ #lls-nudge{left:0;right:0;bottom:0;width:auto;border-radius:0;padding:10px 40px 10px 14px;display:flex;align-items:center;gap:10px}
+ #lls-nudge .lls-nudge-txt{flex:1;min-width:0}
+ #lls-nudge .lls-nudge-h{font-size:14px;margin:0}
+ #lls-nudge .lls-nudge-s{display:none}
+ #lls-nudge a.lls-nudge-btn{flex:none;font-size:13px;padding:10px 14px;white-space:nowrap}
 }
 @media (prefers-reduced-motion:reduce){#lls-nudge{transition:none}}
 </style>
@@ -134,23 +137,20 @@ add_action('wp_footer', function () {
   function show(){
     if(shown) return; shown=true; set(K);
     var w=document.createElement('aside'); w.id='lls-nudge'; w.setAttribute('aria-label','Freedom Tax calculator');
-    var a=document.createElement('a'); a.className='lls-nudge-link'; a.href=C.href;
-    var s=document.createElement('strong'); s.textContent=C.a;
-    var t=document.createElement('span'); t.textContent=C.b;
-    a.appendChild(s); a.appendChild(t);
+    var txt=document.createElement('div'); txt.className='lls-nudge-txt';
+    var hh=document.createElement('span'); hh.className='lls-nudge-h'; hh.textContent=C.a;
+    var ss=document.createElement('span'); ss.className='lls-nudge-s'; ss.textContent=C.sub;
+    txt.appendChild(hh); txt.appendChild(ss);
+    var a=document.createElement('a'); a.className='lls-nudge-btn'; a.href=C.href; a.textContent=C.b;
     a.addEventListener('click',function(){set(D)});
     var x=document.createElement('button'); x.type='button'; x.setAttribute('aria-label','Close'); x.innerHTML='&times;';
     x.addEventListener('click',function(){w.classList.remove('lls-in'); setTimeout(function(){w.remove()},500)});
-    w.appendChild(a); w.appendChild(x); document.body.appendChild(w);
+    w.appendChild(txt); w.appendChild(a); w.appendChild(x); document.body.appendChild(w);
     requestAnimationFrame(function(){requestAnimationFrame(function(){w.classList.add('lls-in')})});
   }
-  if(C.force){ setTimeout(show,800); return; }
-  setTimeout(show,C.delay);
-  function onScroll(){
-    var h=document.documentElement, max=(h.scrollHeight-h.clientHeight)||1;
-    if((window.scrollY||h.scrollTop)/max*100>=C.pct){ window.removeEventListener('scroll',onScroll); show(); }
-  }
-  window.addEventListener('scroll',onScroll,{passive:true});
+  // Show after the FULL page has loaded (images, fonts), so it never delays or shifts content.
+  function go(){ setTimeout(show, C.force ? 300 : C.delay); }
+  if(document.readyState==='complete'){ go(); } else { window.addEventListener('load',go,{once:true}); }
 })();
 </script>
 <?php
